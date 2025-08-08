@@ -2,6 +2,18 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils'; // shadcn helper
 import { Home, Calendar, Video, Phone } from 'lucide-react';
 import logo from '../assets/img/logo.jpg';
+import { useEffect } from "react";
+import { FaFacebook, FaInstagram } from "react-icons/fa"
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 const navItems = [
   { name: 'Home', path: '/', icon: Home },
@@ -15,6 +27,7 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col min-h-screen">
+         <ScrollToTop />
         <header className="md:hidden sticky top-0 z-50 bg-background shadow border-b py-3">
   <div className="flex justify-center">
     <img src={logo} alt="Soundwalk logo" className="h-20" />
@@ -48,27 +61,7 @@ export default function Layout() {
       <footer className="bg-muted text-muted-foreground px-6 py-6 mt-auto">
         <div className="flex justify-center space-x-8 mb-4">
           <a href="https://www.facebook.com/profile.php?id=61557765549373" aria-label="Facebook" target="_blank" rel="noopener noreferrer" className="hover:text-primary">
-            {/* Facebook SVG icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="icon icon-tabler icon-tabler-brand-facebook-filled"
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="#ffffff"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              role="img"
-            >
-              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-              <path
-                d="M18 2a1 1 0 0 1 .993 .883l.007 .117v4a1 1 0 0 1 -.883 .993l-.117 .007h-3v1h3a1 1 0 0 1 .991 1.131l-.02 .112l-1 4a1 1 0 0 1 -.858 .75l-.113 .007h-2v6a1 1 0 0 1 -.883 .993l-.117 .007h-4a1 1 0 0 1 -.993 -.883l-.007 -.117v-6h-2a1 1 0 0 1 -.993 -.883l-.007 -.117v-4a1 1 0 0 1 .883 -.993l.117 -.007h2v-1a6 6 0 0 1 5.775 -5.996l.225 -.004h3z"
-                strokeWidth="0"
-                fill="currentColor"
-              />
-            </svg>
+            <FaFacebook className="h-6 w-6" />
           </a>
 
           <a
@@ -79,24 +72,7 @@ export default function Layout() {
             className="hover:text-primary"
           >
             {/* Instagram SVG icon */}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="icon icon-tabler icon-tabler-brand-instagram"
-              width="36"
-              height="36"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="#ffffff"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              role="img"
-            >
-              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-              <path d="M4 4m0 4a4 4 0 0 1 4 -4h8a4 4 0 0 1 4 4v8a4 4 0 0 1 -4 4h-8a4 4 0 0 1 -4 -4z" />
-              <path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-              <path d="M16.5 7.5l0 .01" />
-            </svg>
+            <FaInstagram className="h-6 w-6" />
           </a>
         </div>
 

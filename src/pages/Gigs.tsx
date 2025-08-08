@@ -1,5 +1,6 @@
 import { GigList } from "../components/GigList";
 import soundwalkThreeStories from "../assets/img/soundwalkThreeStories.jpeg";
+import Hero from "../components/hero";
 
 const gigsData = {
   "2025": {
@@ -54,12 +55,14 @@ const gigsData = {
 
 export default function Gigs() {
   return (
-    <main className="min-h-screen bg-background text-foreground p-8 max-w-7xl mx-auto">
-      <header className="mb-12 text-center">
-        < img src={soundwalkThreeStories} alt="Soundwalk Logo" className="mx-auto block h-68 w-full border-4 object-cover object-center rounded" />
-        <h1 className="text-5xl font-extrabold mb-2">Soundwalk - North East Cover Band</h1>
-        <p className="text-lg text-muted-foreground">Upcoming Shows & Gigs</p>
-      </header>
+      <main className="min-h-screen bg-background text-foreground p-8 max-w-7xl mx-auto">
+      {/* Move the hero OUTSIDE the centered content if you want the mobile full-bleed,
+          but this component already handles that for you. */}
+      <Hero
+        image={soundwalkThreeStories}
+        title="Upcoming Shows"
+        subtitle="Catch us live around the North East"
+      />
 
       <GigList data={gigsData} />
     </main>

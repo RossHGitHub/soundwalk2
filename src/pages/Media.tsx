@@ -1,8 +1,8 @@
-// src/pages/MediaPage.tsx
-
 import { useState } from "react"
-import { Dialog, DialogContent, DialogTrigger } from "../components/ui/Dialog"
+import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
 import { Separator } from "../components/ui/separator"
+import Hero from "../components/hero"
+import SoundwalkPromoTwo from "../assets/img/soundwalkPromoTwo.jpg"
 
 const promoVideos = [
   "https://www.youtube.com/embed/wwHEKfL651E?si=28PwT5ZpHAJwXz0u",
@@ -16,34 +16,40 @@ const liveVideos = [
   {
     title: "The Seven Stars, Ponteland",
     src: "https://www.facebook.com/plugins/video.php?height=314&href=https%3A%2F%2Fwww.facebook.com%2F61554854807963%2Fvideos%2F851406517140169%2F&show_text=false&width=560&t=0",
-    width: "560",
-    height: "314"
+    width: 560,
+    height: 314,
+    orientation: "horizontal",
   },
   {
     title: "The Red Lion, Earsdon",
     src: "https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2F61557765549373%2Fvideos%2F1404345156978439%2F&show_text=false&width=267&t=0",
-    width: "267",
-    height: "476"
+    width: 267,
+    height: 476,
+    orientation: "vertical",
   },
   {
     title: "The Seven Stars, Ponteland",
     src: "https://www.facebook.com/plugins/video.php?height=476&href=https%3A%2F%2Fwww.facebook.com%2Freel%2F578409781294117%2F&show_text=false&width=267&t=0",
-    width: "267",
-    height: "476"
+    width: 267,
+    height: 476,
+    orientation: "vertical",
   }
 ]
 
 export default function MediaPage() {
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
 
+  // Helper: is video vertical if height > width
+  const isVertical = (vid: { width: number; height: number }) => vid.height > vid.width
+
+  const horizontalVideos = liveVideos.filter(vid => !isVertical(vid))
+  const verticalVideos = liveVideos.filter(vid => isVertical(vid))
+
   return (
     <main className="min-h-screen px-4 py-10 bg-background text-foreground">
       <div className="max-w-5xl mx-auto space-y-10 text-center">
 
-        <section className="space-y-2">
-          <h1 className="text-4xl font-bold">Media</h1>
-          <p className="text-muted-foreground">Watch clips and live performances from Soundwalk</p>
-        </section>
+        <Hero image={SoundwalkPromoTwo} title="Media" />
 
         <Separator />
 
@@ -84,51 +90,90 @@ export default function MediaPage() {
         </section>
 
         {/* Live Snaps */}
-        <section aria-label="Live Snaps" className="text-left space-y-6">
-          <h2 className="text-2xl font-semibold text-center">Live Snaps</h2>
-          <p className="text-muted-foreground text-center italic">
-            Here are some clips of us that people have snapped in the wild!
-          </p>
+        {/* Live Snaps */}
+<section aria-label="Live Snaps" className="text-left space-y-6">
+  <h2 className="text-2xl font-semibold text-center">Live Snaps</h2>
+  <p className="text-muted-foreground text-center italic">
+    Here are some clips of us that people have snapped in the wild!
+  </p>
 
-          <div className="grid gap-10 place-items-center">
-            {liveVideos.map((vid, idx) => (
-              <div key={idx} className="space-y-2 text-center">
-                <h3 className="text-xl font-medium">{vid.title}</h3>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <div
-                      className="cursor-pointer rounded-xl border-2 border-emerald-600 overflow-hidden"
-                      onClick={() => setActiveVideo(vid.src)}
-                      style={{ width: vid.width + "px", height: vid.height + "px" }}
-                    >
-                      <iframe
-                        src={vid.src}
-                        width={vid.width}
-                        height={vid.height}
-                        scrolling="no"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                        className="w-full h-full pointer-events-none"
-                      />
-                    </div>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-black rounded-xl">
-                    <iframe
-                      src={vid.src}
-                      title={`Live Video ${idx + 1}`}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      className="w-full aspect-video"
-                    />
-                  </DialogContent>
-                </Dialog>
-              </div>
-            ))}
-          </div>
-        </section>
+  {/* Unified grid for desktop */}
+  <div className="hidden md:grid md:grid-cols-3 md:gap-6 md:justify-center max-w-5xl mx-auto">
+    {liveVideos.map((vid, idx) => (
+      <VideoCard
+        key={idx}
+        vid={vid}
+        onClick={() => setActiveVideo(vid.src)}
+        horizontal={vid.orientation === "horizontal"}
+      />
+    ))}
+  </div>
+
+  {/* Mobile layout: stack all videos */}
+  <div className="block md:hidden space-y-10">
+    {liveVideos.map((vid, idx) => (
+      <VideoCard
+        key={idx}
+        vid={vid}
+        onClick={() => setActiveVideo(vid.src)}
+        horizontal={vid.orientation === "horizontal"}
+      />
+    ))}
+  </div>
+</section>
+
       </div>
     </main>
+  )
+}
+
+interface VideoCardProps {
+  vid: {
+    title: string;
+    src: string;
+    width: number;
+    height: number;
+  }
+  onClick: () => void;
+  horizontal: boolean;
+}
+
+function VideoCard({ vid, onClick, horizontal }: VideoCardProps) {
+  // Use aspect-video for horizontal (16:9), and aspect-[9/16] for vertical (portrait)
+  const aspectClass = horizontal ? "aspect-video" : "aspect-[9/16]"
+
+  return (
+    <div className="space-y-2 text-center max-w-full">
+      <h3 className="text-xl font-medium">{vid.title}</h3>
+      <Dialog>
+        <DialogTrigger asChild>
+          <div
+            className={`cursor-pointer rounded-xl border-2 border-emerald-600 overflow-hidden max-w-full mx-auto ${aspectClass}`}
+            onClick={onClick}
+            style={{ maxWidth: vid.width }}
+          >
+            <iframe
+              src={vid.src}
+              scrolling="no"
+              frameBorder="0"
+              allowFullScreen
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              className="w-full h-full pointer-events-none"
+              title={vid.title}
+            />
+          </div>
+        </DialogTrigger>
+        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-black rounded-xl">
+          <iframe
+            src={vid.src}
+            title={vid.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            className="w-full aspect-video"
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

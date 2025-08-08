@@ -13,32 +13,30 @@ export default function HomePage() {
     
 
       {/* Hero Section */}
-      <section className="relative w-full h-[400px] md:h-[600px] overflow-hidden">
-        <video
-        src={promoVideo}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-lg border-2 border-emerald-600"
-          
-        >
-          
-          Your browser does not support the video tag.
-        </video>
-        <div className="relative z-10 flex items-center justify-center h-full">
-          <h1 className="text-white text-3xl md:text-5xl font-semibold px-4 text-center fly-in-left">
-            North-East based functions and covers band.
-          </h1>
-        </div>
-      </section>
+     <section className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden">
+  <video
+    src={promoVideo}
+    autoPlay
+    muted
+    loop
+    playsInline
+    className="absolute top-0 left-0 w-full h-full object-cover rounded-lg border-2 border-emerald-600"
+  >
+    Your browser does not support the video tag.
+  </video>
+  <div className="relative z-10 flex items-center justify-center h-full">
+    <h1 className="text-white text-2xl sm:text-3xl md:text-5xl px-4 text-center fly-in-left">
+      North-East based functions and covers band.
+    </h1>
+  </div>
+</section>
 
       {/* About Section */}
       <section
         aria-label="About"
-        className="max-w-5xl mx-auto px-6 py-10 space-y-6"
+        className="max-w-5xl mx-auto px-6 py-10 space-y-4"
       >
-        <div className="w-20 h-20 " />
+        <div className="w-20 h- " />
         <h2 className="text-4xl font-bold subheading ">Welcome to Soundwalk</h2>
         <p>
           Soundwalk are a professional covers band, specializing in playing a
@@ -68,28 +66,28 @@ export default function HomePage() {
             musical styles, from classics to modern hits.
           </p>
           <p>Check out just some of the artists we play:</p>
-          <ul className="list-disc list-inside grid grid-cols-2 gap-x-6 gap-y-2">
-            {[
-              "The Turtles",
-              "Stereophonics",
-              "The Weeknd",
-              "Van Morrison",
-              "Harry Styles",
-              "Kaiser Chiefs",
-              "Coldplay",
-              "Jackie Wilson",
-              "Bastille",
-              "Girls Aloud",
-              "The Who",
-              "Walk The Moon",
-              "Wheezer",
-              "R.E.M",
-              "Jet",
-              "Deep Blue Something",
-            ].map((artist) => (
-              <li key={artist}>{artist}</li>
-            ))}
-          </ul>
+          <ul className="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+  {[
+    "The Turtles",
+    "Stereophonics",
+    "The Weeknd",
+    "Van Morrison",
+    "Harry Styles",
+    "Kaiser Chiefs",
+    "Coldplay",
+    "Jackie Wilson",
+    "Bastille",
+    "Girls Aloud",
+    "The Who",
+    "Walk The Moon",
+    "Wheezer",
+    "R.E.M",
+    "Jet",
+    "Deep Blue Something",
+  ].map((artist) => (
+    <li key={artist}>{artist}</li>
+  ))}
+</ul>
           <p>The list, quite literally, goes on and on!</p>
         </Card>
 
@@ -109,7 +107,7 @@ export default function HomePage() {
           <p>
             We provide all our own professional-grade equipment, including a
             full PA system and stage lighting - everything needed for an
-            impressive live performance. For smaller to mid-sized venues, we’re
+            impressive live performance. For smaller to mid-sized venues, we're
             fully self-contained and ready to go.
           </p>
           <p>
