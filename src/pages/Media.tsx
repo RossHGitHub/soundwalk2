@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
 import { Separator } from "../components/ui/separator"
 import Hero from "../components/Hero"
-import SoundwalkPromoTwo from "../assets/img/soundwalkPromoTwo.jpg"
+import SoundwalkPromoTwo from "../assets/img/SoundwalkPromoTwo.jpg"
 
 const promoVideos = [
   "https://www.youtube.com/embed/wwHEKfL651E?si=28PwT5ZpHAJwXz0u",
