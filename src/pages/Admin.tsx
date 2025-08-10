@@ -1,14 +1,14 @@
 // pages/admin.tsx
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "../components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
   DialogFooter,
 } from "../components/ui/dialog";
@@ -36,7 +36,6 @@ export default function Admin() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentGig, setCurrentGig] = useState<Gig | null>(null);
 
-  const [checked, setChecked] = useState(false);
 
   const [formData, setFormData] = useState<Gig>({
     venue: "",

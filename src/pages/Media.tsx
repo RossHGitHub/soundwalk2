@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
 import { Separator } from "../components/ui/separator"
-import Hero from "../components/hero"
+import Hero from "../components/Hero"
 import SoundwalkPromoTwo from "../assets/img/soundwalkPromoTwo.jpg"
 
 const promoVideos = [
@@ -38,14 +38,10 @@ const liveVideos = [
 
 export default function MediaPage() {
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
-
-  // Helper: is video vertical if height > width
-  const isVertical = (vid: { width: number; height: number }) => vid.height > vid.width
-
-  const horizontalVideos = liveVideos.filter(vid => !isVertical(vid))
-  const verticalVideos = liveVideos.filter(vid => isVertical(vid))
+activeVideo
 
   return (
+    
     <main className="min-h-screen px-4 py-10 bg-background text-foreground">
       <div className="max-w-5xl mx-auto space-y-10 text-center">
 

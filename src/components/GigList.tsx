@@ -4,10 +4,7 @@ import { useState } from "react";
 import { Card } from "../components/ui/card";
 import {
   Dialog,
-  DialogTrigger,
   DialogContent,
-  DialogTitle,
-  DialogDescription,
 } from "../components/ui/dialog"
 
 

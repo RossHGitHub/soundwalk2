@@ -1,6 +1,6 @@
 import { GigList } from "../components/GigList";
 import soundwalkThreeStories from "../assets/img/soundwalkThreeStories.jpeg";
-import Hero from "../components/hero";
+import Hero from "../components/Hero";
 
 const gigsData = {
   "2025": {
@@ -61,7 +61,6 @@ export default function Gigs() {
       <Hero
         image={soundwalkThreeStories}
         title="Upcoming Shows"
-        subtitle="Catch us live around the North East"
       />
 
       <GigList data={gigsData} />
