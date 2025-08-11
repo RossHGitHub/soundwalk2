@@ -1,20 +1,20 @@
 "use client";
-
 import { useState } from "react";
 import { Card } from "../components/ui/card";
 import {
   Dialog,
   DialogContent,
 } from "../components/ui/dialog"
-
-
 type Gig = {
-  id: number;
+  _id?: string;
   venue: string;
   date: string;
-  time: string;
+  startTime?: string;
+  description?: string;
+  fee?: number;
+  privateEvent?: boolean;
+  postersNeeded?: boolean;
 };
-
 type GigListProps = {
   data: {
     [year: string]: {
@@ -22,29 +22,35 @@ type GigListProps = {
     };
   };
 };
-
 export function GigList({ data }: GigListProps) {
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
-
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
   return (
     <>
       {Object.entries(data).map(([year, months]) => (
         <section key={year} className="mb-20">
           <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">{year}</h2>
-
           {Object.entries(months).map(([month, gigs]) => (
             <div key={month} className="mb-12">
               <h3 className="text-2xl font-semibold mb-6">{month}</h3>
               <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {gigs.map((gig) => (
                   <Card
-                    key={gig.id}
+                    key={gig._id}
                     className="p-6 hover:shadow-lg transition-shadow rounded-lg cursor-pointer border-emerald-600"
                     onClick={() => setSelectedGig(gig)}
                   >
                     <div className="text-xl font-semibold mb-2">{gig.venue}</div>
-                    <div className="text-muted-foreground">{gig.date}</div>
-                    <div className="text-muted-foreground">{gig.time}</div>
+                    <div className="text-muted-foreground">{formatDate(gig.date)}</div>
+                    <div className="text-muted-foreground">{gig.startTime}</div>
                   </Card>
                 ))}
               </div>
@@ -52,23 +58,21 @@ export function GigList({ data }: GigListProps) {
           ))}
         </section>
       ))}
-
     <Dialog open={!!selectedGig} onOpenChange={(open) => !open && setSelectedGig(null)}>
-  <DialogContent className="max-w-4xl p-6 rounded-lg">
+  <DialogContent className="max-w-4xl p-6 rounded-lg sm:p-8 border-emerald-600">
     {selectedGig && (
       <div className="flex flex-col lg:flex-row h-full">
         {/* Map: Left on desktop, top on mobile */}
         <div className="lg:w-1/2 w-full h-64 lg:h-auto rounded-l-lg overflow-hidden bg-gray-300 flex items-center justify-center text-muted-foreground">
           Map Placeholder for <strong>{selectedGig.venue}</strong>
         </div>
-
         {/* Info: Right on desktop, below on mobile */}
         <div className="lg:w-1/2 w-full p-6 flex flex-col justify-center rounded-r-lg">
           <h2 className="text-2xl font-bold mb-2">{selectedGig.venue}</h2>
-          <p className="text-muted-foreground mb-4">Date: {selectedGig.date}</p>
-          <p className="text-muted-foreground mb-4">Time: {selectedGig.time}</p>
+          <p className="text-muted-foreground mb-4">Date: {formatDate(selectedGig.date)}</p>
+          <p className="text-muted-foreground mb-4">Time: {selectedGig.startTime}</p>
           <p className="text-sm mb-4">
-            Short description about the gig, event notes, setlist preview, or venue info can go here.
+            {selectedGig.description || "No description provided."}
           </p>
           <button
             onClick={() => setSelectedGig(null)}
@@ -81,7 +85,6 @@ export function GigList({ data }: GigListProps) {
     )}
   </DialogContent>
 </Dialog>
-
     </>
   );
 }

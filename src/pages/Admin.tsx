@@ -1,6 +1,4 @@
-// pages/admin.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "../components/ui/button";
@@ -16,7 +14,8 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
-
+import Hero from "../components/Hero"
+import SettingsAsset from "../assets/img/settings_asset.jpg";
 type Gig = {
   _id?: string;
   venue: string;
@@ -27,16 +26,11 @@ type Gig = {
   privateEvent?: boolean;
   postersNeeded?: boolean;
 };
-
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // For dialog modal control:
   const [isOpen, setIsOpen] = useState(false);
   const [currentGig, setCurrentGig] = useState<Gig | null>(null);
-
-
   const [formData, setFormData] = useState<Gig>({
     venue: "",
     date: "",
@@ -46,11 +40,10 @@ export default function Admin() {
     privateEvent: false,
     postersNeeded: false,
   });
-
+  const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
   useEffect(() => {
     fetchGigs();
   }, []);
-
   async function fetchGigs() {
     setLoading(true);
     const res = await fetch("/api/gigs");
@@ -64,11 +57,10 @@ export default function Admin() {
     );
     setLoading(false);
   }
-
   function openModal(gig: Gig | null = null) {
     if (gig) {
       setCurrentGig(gig);
-      setFormData(gig);
+      setFormData(gig); 
     } else {
       setCurrentGig(null);
       setFormData({
@@ -83,24 +75,36 @@ export default function Admin() {
     }
     setIsOpen(true);
   }
-
   function closeModal() {
     setIsOpen(false);
+    setVenueSuggestions([]);
   }
-
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        type === "checkbox"
-          ? (e.target as HTMLInputElement).checked
-          : value,
-    }));
+    setFormData((prev) => {
+      const updatedData = {
+        ...prev,
+        [name]:
+          type === "checkbox"
+            ? (e.target as HTMLInputElement).checked
+            : value,
+      };
+      if (name === "venue" && value.length > 0) {
+        const uniqueVenues = Array.from(new Set(gigs.map(g => g.venue)));
+        const suggestions = uniqueVenues.filter(v => v.toLowerCase().startsWith(value.toLowerCase()));
+        setVenueSuggestions(suggestions);
+      } else if (name === "venue" && value.length === 0) {
+        setVenueSuggestions([]);
+      }
+      return updatedData;
+    });
   }
-
+  function handleVenueSuggestionClick(venue: string) {
+    setFormData((prev) => ({ ...prev, venue: venue }));
+    setVenueSuggestions([]);
+  }
   async function saveGig(e: FormEvent) {
     e.preventDefault();
     const method = currentGig ? "PUT" : "POST";
@@ -109,29 +113,37 @@ export default function Admin() {
       fee: Number(formData.fee),
       id: currentGig?._id,
     };
-
-    const res = await fetch("/api/gigs", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      await fetchGigs();
-      closeModal();
-    } else {
-      alert("Failed to save gig");
+    if (currentGig && payload._id) {
+        payload.id = payload._id;
+    }
+    try {
+      const res = await fetch("/api/gigs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      // The fix: Check for the specific status code we expect for a successful update
+      if (res.status === 200 || res.status === 204) {
+        await fetchGigs();
+        closeModal();
+      } else {
+        // Log the response to the console to help with debugging
+        console.error('API responded with an unexpected status code:', res.status);
+        alert("Failed to save gig: The server responded with an error.");
+      }
+    } catch (error) {
+      console.error('An error occurred while saving the gig:', error);
+      alert("Failed to save gig: An error occurred during the request.");
     }
   }
-
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Admin: Manage Gigs</h1>
-
-      <Button onClick={() => openModal()} className="mb-4">
-        Add Gig
-      </Button>
-
+      <Hero image={SettingsAsset} title="Admin Panel"></Hero>
+      <div className="flex justify-end mb-8">
+    <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
+      Add Gig
+    </Button>
+  </div>
       {loading ? (
         <p>Loading gigs...</p>
       ) : gigs.length === 0 ? (
@@ -142,18 +154,18 @@ export default function Admin() {
             <li
               key={gig._id}
               onClick={() => openModal(gig)}
-              className="border p-4 rounded cursor-pointer hover:bg-emerald-50"
+              className="border p-4 rounded cursor-pointer hover:bg-emerald-800"
             >
               <div className="flex justify-between">
                 <strong>{gig.venue}</strong>
                 <span>{new Date(gig.date).toLocaleDateString()}</span>
               </div>
               <p>{gig.description}</p>
+              <p>£{gig.fee}</p>
             </li>
           ))}
         </ul>
       )}
-
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white">
           <DialogHeader>
@@ -162,7 +174,6 @@ export default function Admin() {
       Use this form to {currentGig ? "edit the gig details" : "add a new gig"}.
     </DialogDescription>
           </DialogHeader>
-
           <form onSubmit={saveGig} className="space-y-4 mt-2">
             <div>
               <Label htmlFor="venue">Venue</Label>
@@ -175,8 +186,20 @@ export default function Admin() {
                 required
                 autoFocus
               />
+              {venueSuggestions.length > 0 && (
+                <ul className="border border-t-0 border-gray-600 rounded-b-lg max-h-48 overflow-y-auto">
+                  {venueSuggestions.map((venue) => (
+                    <li
+                      key={venue}
+                      className="p-2 cursor-pointer hover:bg-emerald-800"
+                      onClick={() => handleVenueSuggestionClick(venue)}
+                    >
+                      {venue}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-
             <div>
               <Label htmlFor="date">Date</Label>
               <Input
@@ -188,7 +211,6 @@ export default function Admin() {
                 required
               />
             </div>
-
             <div>
               <Label htmlFor="startTime">Start Time</Label>
               <Input
@@ -199,7 +221,6 @@ export default function Admin() {
                 onChange={handleChange}
               />
             </div>
-
             <div>
               <Label htmlFor="description">Description</Label>
               <Textarea
@@ -209,7 +230,6 @@ export default function Admin() {
                 onChange={handleChange}
               />
             </div>
-
             <div>
               <Label htmlFor="fee">Fee (£)</Label>
               <Input
@@ -222,7 +242,6 @@ export default function Admin() {
                 onChange={handleChange}
               />
             </div>
-
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -236,7 +255,6 @@ export default function Admin() {
                   Private Event
                 </Label>
               </div>
-
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="postersNeeded"
@@ -250,7 +268,6 @@ export default function Admin() {
                 </Label>
               </div>
             </div>
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeModal}>
                 Cancel
