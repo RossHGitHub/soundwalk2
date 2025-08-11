@@ -14,8 +14,9 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
-import Hero from "../components/Hero"
+import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
+
 type Gig = {
   _id?: string;
   venue: string;
@@ -26,6 +27,7 @@ type Gig = {
   privateEvent?: boolean;
   postersNeeded?: boolean;
 };
+
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,12 +43,14 @@ export default function Admin() {
     postersNeeded: false,
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
+
   useEffect(() => {
     fetchGigs();
   }, []);
+
   async function fetchGigs() {
     setLoading(true);
-    const res = await fetch("/api/gigs");
+    const res = await fetch("../api/gigs");
     const data = await res.json();
     setGigs(
       data.map((gig: any) => ({
@@ -57,10 +61,11 @@ export default function Admin() {
     );
     setLoading(false);
   }
+
   function openModal(gig: Gig | null = null) {
     if (gig) {
       setCurrentGig(gig);
-      setFormData(gig); 
+      setFormData(gig);
     } else {
       setCurrentGig(null);
       setFormData({
@@ -75,13 +80,13 @@ export default function Admin() {
     }
     setIsOpen(true);
   }
+
   function closeModal() {
     setIsOpen(false);
     setVenueSuggestions([]);
   }
-  function handleChange(
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
+
+  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type } = e.target;
     setFormData((prev) => {
       const updatedData = {
@@ -92,8 +97,10 @@ export default function Admin() {
             : value,
       };
       if (name === "venue" && value.length > 0) {
-        const uniqueVenues = Array.from(new Set(gigs.map(g => g.venue)));
-        const suggestions = uniqueVenues.filter(v => v.toLowerCase().startsWith(value.toLowerCase()));
+        const uniqueVenues = Array.from(new Set(gigs.map((g) => g.venue)));
+        const suggestions = uniqueVenues.filter((v) =>
+          v.toLowerCase().startsWith(value.toLowerCase())
+        );
         setVenueSuggestions(suggestions);
       } else if (name === "venue" && value.length === 0) {
         setVenueSuggestions([]);
@@ -101,10 +108,12 @@ export default function Admin() {
       return updatedData;
     });
   }
+
   function handleVenueSuggestionClick(venue: string) {
     setFormData((prev) => ({ ...prev, venue: venue }));
     setVenueSuggestions([]);
   }
+
   async function saveGig(e: FormEvent) {
     e.preventDefault();
     const method = currentGig ? "PUT" : "POST";
@@ -114,36 +123,57 @@ export default function Admin() {
       id: currentGig?._id,
     };
     if (currentGig && payload._id) {
-        payload.id = payload._id;
+      payload.id = payload._id;
     }
     try {
-      const res = await fetch("/api/gigs", {
+      const res = await fetch("../api/gigs", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      // The fix: Check for the specific status code we expect for a successful update
+      if (res.status === 200 || res.status === 201 || res.status === 204) {
+        await fetchGigs();
+        closeModal();
+      } else {
+        console.error("API responded with an unexpected status code:", res.status);
+        alert("Failed to save gig: The server responded with an error.");
+      }
+    } catch (error) {
+      console.error("An error occurred while saving the gig:", error);
+      alert("Failed to save gig: An error occurred during the request.");
+    }
+  }
+
+  async function deleteGig() {
+    if (!currentGig?._id) return;
+    if (!confirm("Are you sure you want to delete this gig?")) return;
+
+    try {
+      const res = await fetch(`../api/gigs?id=${currentGig._id}`, {
+        method: "DELETE",
+      });
       if (res.status === 200 || res.status === 204) {
         await fetchGigs();
         closeModal();
       } else {
-        // Log the response to the console to help with debugging
-        console.error('API responded with an unexpected status code:', res.status);
-        alert("Failed to save gig: The server responded with an error.");
+        console.error("API responded with an unexpected status code:", res.status);
+        alert("Failed to delete gig: The server responded with an error.");
       }
     } catch (error) {
-      console.error('An error occurred while saving the gig:', error);
-      alert("Failed to save gig: An error occurred during the request.");
+      console.error("An error occurred while deleting the gig:", error);
+      alert("Failed to delete gig: An error occurred during the request.");
     }
   }
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <Hero image={SettingsAsset} title="Admin Panel"></Hero>
+      <Hero image={SettingsAsset} title="Admin Panel" />
       <div className="flex justify-end mb-8">
-    <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
-      Add Gig
-    </Button>
-  </div>
+        <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
+          Add Gig
+        </Button>
+      </div>
+
       {loading ? (
         <p>Loading gigs...</p>
       ) : gigs.length === 0 ? (
@@ -166,13 +196,14 @@ export default function Admin() {
           ))}
         </ul>
       )}
+
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white">
           <DialogHeader>
             <DialogTitle>{currentGig ? "Edit Gig" : "Add Gig"}</DialogTitle>
             <DialogDescription>
-      Use this form to {currentGig ? "edit the gig details" : "add a new gig"}.
-    </DialogDescription>
+              Use this form to {currentGig ? "edit the gig details" : "add a new gig"}.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveGig} className="space-y-4 mt-2">
             <div>
@@ -268,11 +299,18 @@ export default function Admin() {
                 </Label>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex justify-between items-center">
               <Button type="button" variant="outline" onClick={closeModal}>
                 Cancel
               </Button>
-              <Button type="submit">{currentGig ? "Save" : "Add"}</Button>
+              <div className="flex space-x-2">
+                {currentGig && (
+                  <Button type="button" variant="destructive" onClick={deleteGig}>
+                    Delete
+                  </Button>
+                )}
+                <Button type="submit">{currentGig ? "Save" : "Add"}</Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
