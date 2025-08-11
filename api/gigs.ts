@@ -137,7 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { returnDocument: "after" }
     );
 
-    if (!r.value) return res.status(404).json({ error: "Not found" });
+    if (!r || !r.value) return res.status(404).json({ error: "Not found" });
 
     // Google Calendar sync
     if (calendar) {
