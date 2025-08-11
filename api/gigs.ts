@@ -156,7 +156,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         };
 
-        if (r.value.calendarEventId) {
+        if (r && r.value && r.value.calendarEventId) {
           await calendar.events.update({
             calendarId: calendarId,
             eventId: r.value.calendarEventId,
