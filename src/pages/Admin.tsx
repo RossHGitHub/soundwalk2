@@ -20,7 +20,7 @@ import SettingsAsset from "../assets/img/settings_asset.jpg";
 type Gig = {
   _id?: string;
   venue: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   startTime?: string;
   description?: string;
   fee?: number | string;
@@ -110,7 +110,7 @@ export default function Admin() {
   }
 
   function handleVenueSuggestionClick(venue: string) {
-    setFormData((prev) => ({ ...prev, venue: venue }));
+    setFormData((prev) => ({ ...prev, venue }));
     setVenueSuggestions([]);
   }
 
@@ -131,15 +131,13 @@ export default function Admin() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.status === 200 || res.status === 201 || res.status === 204) {
+      if ([200, 201, 204].includes(res.status)) {
         await fetchGigs();
         closeModal();
       } else {
-        console.error("API responded with an unexpected status code:", res.status);
         alert("Failed to save gig: The server responded with an error.");
       }
     } catch (error) {
-      console.error("An error occurred while saving the gig:", error);
       alert("Failed to save gig: An error occurred during the request.");
     }
   }
@@ -147,55 +145,91 @@ export default function Admin() {
   async function deleteGig() {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
-
     try {
       const res = await fetch(`../api/gigs?id=${currentGig._id}`, {
         method: "DELETE",
       });
-      if (res.status === 200 || res.status === 204) {
+      if ([200, 204].includes(res.status)) {
         await fetchGigs();
         closeModal();
       } else {
-        console.error("API responded with an unexpected status code:", res.status);
         alert("Failed to delete gig: The server responded with an error.");
       }
     } catch (error) {
-      console.error("An error occurred while deleting the gig:", error);
       alert("Failed to delete gig: An error occurred during the request.");
     }
   }
 
+  function groupGigsByDate(gigs: Gig[]) {
+    return gigs.reduce((acc, gig) => {
+      const date = new Date(gig.date);
+      const year = date.getFullYear().toString();
+      const month = date.toLocaleString("default", { month: "long" });
+      acc[year] = acc[year] || {};
+      acc[year][month] = acc[year][month] || [];
+      acc[year][month].push(gig);
+      return acc;
+    }, {} as { [year: string]: { [month: string]: Gig[] } });
+  }
+
+  function formatDate(dateString: string) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
       <div className="flex justify-end mb-8">
         <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
           Add Gig
         </Button>
       </div>
-
-      {loading ? (
-        <p>Loading gigs...</p>
-      ) : gigs.length === 0 ? (
-        <p>No gigs booked yet.</p>
-      ) : (
-        <ul className="space-y-3">
-          {gigs.map((gig) => (
-            <li
-              key={gig._id}
-              onClick={() => openModal(gig)}
-              className="border p-4 rounded cursor-pointer hover:bg-emerald-800"
-            >
-              <div className="flex justify-between">
-                <strong>{gig.venue}</strong>
-                <span>{new Date(gig.date).toLocaleDateString()}</span>
+{loading ? (
+  <p>Loading gigs...</p>
+) : gigs.length === 0 ? (
+  <p>No gigs booked yet.</p>
+) : (
+  Object.entries(groupGigsByDate(gigs)).map(([year, months]) => (
+    <section key={year} className="mb-20">
+      <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
+        {year}
+      </h2>
+      {Object.entries(months).map(([month, monthGigs]) => (
+        <div key={month} className="mb-12">
+          <h3 className="text-2xl font-semibold mb-6">{month}</h3>
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {monthGigs.map((gig) => (
+              <div
+                key={gig._id}
+                onClick={() => openModal(gig)}
+                className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
+                  <span className="text-sm text-muted-foreground">
+                    {formatDate(gig.date)}
+                  </span>
+                </div>
+                {gig.description && (
+                  <p className="text-muted-foreground mb-4">{gig.description}</p>
+                )}
+                <div className="flex justify-end">
+                  <p className="text-xl text-emerald-400">£{gig.fee}</p>
+                </div>
               </div>
-              <p>{gig.description}</p>
-              <p>£{gig.fee}</p>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+  ))
+)}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white">
@@ -282,9 +316,7 @@ export default function Admin() {
                     setFormData((prev) => ({ ...prev, privateEvent: !!checked }))
                   }
                 />
-                <Label htmlFor="privateEvent" className="mb-0">
-                  Private Event
-                </Label>
+                <Label htmlFor="privateEvent">Private Event</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -294,9 +326,7 @@ export default function Admin() {
                     setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))
                   }
                 />
-                <Label htmlFor="postersNeeded" className="mb-0">
-                  Posters Needed
-                </Label>
+                <Label htmlFor="postersNeeded">Posters Needed</Label>
               </div>
             </div>
             <DialogFooter className="flex justify-between items-center">
