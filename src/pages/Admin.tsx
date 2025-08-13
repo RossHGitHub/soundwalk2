@@ -182,6 +182,12 @@ export default function Admin() {
     });
   }
 
+  function formatTime(timeString?: string) {
+    if (!timeString) return "";
+    const [hours, minutes] = timeString.split(":");
+    return `${hours}:${minutes}`;
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
@@ -190,46 +196,54 @@ export default function Admin() {
           Add Gig
         </Button>
       </div>
-{loading ? (
-  <p>Loading gigs...</p>
-) : gigs.length === 0 ? (
-  <p>No gigs booked yet.</p>
-) : (
-  Object.entries(groupGigsByDate(gigs)).map(([year, months]) => (
-    <section key={year} className="mb-20">
-      <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
-        {year}
-      </h2>
-      {Object.entries(months).map(([month, monthGigs]) => (
-        <div key={month} className="mb-12">
-          <h3 className="text-2xl font-semibold mb-6">{month}</h3>
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {monthGigs.map((gig) => (
-              <div
-                key={gig._id}
-                onClick={() => openModal(gig)}
-                className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDate(gig.date)}
-                  </span>
-                </div>
-                {gig.description && (
-                  <p className="text-muted-foreground mb-4">{gig.description}</p>
-                )}
-                <div className="flex justify-end">
-                  <p className="text-xl text-emerald-400">£{gig.fee}</p>
+      {loading ? (
+        <p>Loading gigs...</p>
+      ) : gigs.length === 0 ? (
+        <p>No gigs booked yet.</p>
+      ) : (
+        Object.entries(groupGigsByDate(gigs)).map(([year, months]) => (
+          <section key={year} className="mb-20">
+            <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
+              {year}
+            </h2>
+            {Object.entries(months).map(([month, monthGigs]) => (
+              <div key={month} className="mb-12">
+                <h3 className="text-2xl font-semibold mb-6">{month}</h3>
+                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                  {monthGigs.map((gig) => (
+                    <div
+                      key={gig._id}
+                      onClick={() => openModal(gig)}
+                      className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(gig.date)}
+                        </span>
+                      </div>
+                      {gig.startTime && (
+                        <p className="text-sm text-emerald-300 mb-2">
+                          Start: {formatTime(gig.startTime)}
+                        </p>
+                      )}
+                      {gig.description && (
+                        <p className="text-muted-foreground mb-4">{gig.description}</p>
+                      )}
+                      <div className="flex justify-between items-end">
+                        <p className="text-xl text-emerald-400">£{gig.fee}</p>
+                        {gig.postersNeeded && (
+                          <p className="text-red-400 italic text-sm">Posters needed!</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      ))}
-    </section>
-  ))
-)}
+          </section>
+        ))
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white">
@@ -282,6 +296,7 @@ export default function Admin() {
                 id="startTime"
                 name="startTime"
                 type="time"
+                step="900" // 900 seconds = 15 minutes
                 value={formData.startTime || ""}
                 onChange={handleChange}
               />
