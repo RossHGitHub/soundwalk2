@@ -43,8 +43,6 @@ export default function Admin() {
     postersNeeded: false,
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchGigs();
@@ -64,24 +62,27 @@ export default function Admin() {
     setLoading(false);
   }
 
-  function openModal(gig: Gig | null = null) {
-    if (gig) {
-      setCurrentGig(gig);
-      setFormData(gig);
-    } else {
-      setCurrentGig(null);
-      setFormData({
-        venue: "",
-        date: "",
-        startTime: "",
-        description: "",
-        fee: "",
-        privateEvent: false,
-        postersNeeded: false,
-      });
-    }
-    setIsOpen(true);
+ function openModal(gig: Gig | null = null) {
+  if (gig) {
+    setCurrentGig(gig);
+    setFormData({
+      ...gig,
+      _id: gig._id, // preserve the Mongo _id so PUT works
+    });
+  } else {
+    setCurrentGig(null);
+    setFormData({
+      venue: "",
+      date: "",
+      startTime: "",
+      description: "",
+      fee: "",
+      privateEvent: false,
+      postersNeeded: false,
+    });
   }
+  setIsOpen(true);
+}
 
   function closeModal() {
     setIsOpen(false);
@@ -115,42 +116,35 @@ export default function Admin() {
     setFormData((prev) => ({ ...prev, venue }));
     setVenueSuggestions([]);
   }
-
-  async function saveGig(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    const method = currentGig ? "PUT" : "POST";
-    const payload = {
-      ...formData,
-      fee: Number(formData.fee),
-      id: currentGig?._id,
-    };
-    if (currentGig && payload._id) {
-      payload.id = payload._id;
+  
+async function saveGig(e: FormEvent) {
+  e.preventDefault();
+  const method = currentGig ? "PUT" : "POST";
+  const payload = {
+    ...formData,
+    fee: Number(formData.fee),
+    id: formData._id || currentGig?._id || undefined,
+  };
+  try {
+    const res = await fetch("../api/gigs", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if ([200, 201, 204].includes(res.status)) {
+      await fetchGigs();
+      closeModal();
+    } else {
+      alert("Failed to save gig: The server responded with an error.");
     }
-    try {
-      const res = await fetch("../api/gigs", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if ([200, 201, 204].includes(res.status)) {
-        await fetchGigs();
-        closeModal();
-      } else {
-        alert("Failed to save gig: The server responded with an error.");
-      }
-    } catch (error) {
-      alert("Failed to save gig: An error occurred during the request.");
-    } finally {
-      setSaving(false);
-    }
+  } catch (error) {
+    alert("Failed to save gig: An error occurred during the request.");
   }
+}
 
   async function deleteGig() {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
-    setDeleting(true);
     try {
       const res = await fetch(`../api/gigs?id=${currentGig._id}`, {
         method: "DELETE",
@@ -163,8 +157,6 @@ export default function Admin() {
       }
     } catch (error) {
       alert("Failed to delete gig: An error occurred during the request.");
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -188,6 +180,12 @@ export default function Admin() {
       month: "short",
       year: "numeric",
     });
+  }
+
+  function formatTime(timeString?: string) {
+    if (!timeString) return "";
+    const [hours, minutes] = timeString.split(":");
+    return `${hours}:${minutes}`;
   }
 
   return (
@@ -216,29 +214,30 @@ export default function Admin() {
                     <div
                       key={gig._id}
                       onClick={() => openModal(gig)}
-                      className="relative p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all"
+                      className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
                     >
-                      {gig.postersNeeded && (
-                        <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-bl-lg">
-                          Posters Needed!
-                        </div>
-                      )}
                       <div className="flex justify-between items-start mb-2">
                         <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
                         <span className="text-sm text-muted-foreground">
                           {formatDate(gig.date)}
                         </span>
                       </div>
+                         {gig.postersNeeded && (
+                        <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          Posters Needed!
+                        </div>
+                      )}
                       {gig.startTime && (
-                        <p className="text-sm text-gray-300 mb-2">
-                          {gig.startTime}
+                        <p className="text-sm text-emerald-300 mb-2">
+                          Start: {formatTime(gig.startTime)}
                         </p>
                       )}
                       {gig.description && (
                         <p className="text-muted-foreground mb-4">{gig.description}</p>
                       )}
-                      <div className="flex justify-end items-end h-full">
+                      <div className="flex justify-between items-end">
                         <p className="text-xl text-emerald-400">£{gig.fee}</p>
+                       
                       </div>
                     </div>
                   ))}
@@ -300,7 +299,7 @@ export default function Admin() {
                 id="startTime"
                 name="startTime"
                 type="time"
-                step={900}
+                step={900} // 900 seconds = 15 minutes
                 value={formData.startTime || ""}
                 onChange={handleChange}
               />
@@ -354,18 +353,11 @@ export default function Admin() {
               </Button>
               <div className="flex space-x-2">
                 {currentGig && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={deleteGig}
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
+                  <Button type="button" variant="destructive" onClick={deleteGig}>
+                    Delete
                   </Button>
                 )}
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving..." : currentGig ? "Save" : "Add"}
-                </Button>
+                <Button type="submit">{currentGig ? "Save" : "Add"}</Button>
               </div>
             </DialogFooter>
           </form>
