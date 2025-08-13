@@ -87,6 +87,8 @@ export default function Layout() {
             Fraser Farnan
           </a>
         </p>
+        <Link className='underline hover:text-primary flex justify-center text-xs'
+              to={'/admin'}>Admin</Link>
       </footer>
       </main>
 
