@@ -5,7 +5,7 @@ import { google } from "googleapis";
 const uri = process.env.MONGODB_URI!;
 const dbName = process.env.MONGODB_DB!;
 let client: MongoClient | null = null;
-const calendarId = process.env.GOOGLE_CALENDAR_ID || "primary";
+const calendarId = "soundwalkband@gmail.com";
 
 async function getDb() {
   if (!client) {
@@ -42,6 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const col = db.collection("gigs");
   const method = req.method;
   const calendar = getCalendarClient();
+  console.log("GOOGLE_CREDENTIALS length:", process.env.GOOGLE_CREDENTIALS?.length);
+console.log("Calendar object:", calendar);
 
   // GET gigs — no Google auth required
   if (method === "GET") {
@@ -58,6 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === "POST") {
     const body = req.body;
     const gigDate = new Date(body.date);
+    console.log("POST request hit with body:", body);
+
     if (body.startTime) {
       const [hours, minutes] = body.startTime.split(":").map(Number);
       gigDate.setHours(hours, minutes);
@@ -112,77 +116,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // PUT — update gig + update/create calendar event
   if (method === "PUT") {
-    const body = req.body;
-    const id = body.id || body._id;
-    if (!id) return res.status(400).json({ error: "Missing id" });
+  const body = req.body;
+  const id = body.id || body._id;
+  if (!id) return res.status(400).json({ error: "Missing id" });
 
-    const gigDate = new Date(body.date);
-    if (body.startTime) {
-      const [hours, minutes] = body.startTime.split(":").map(Number);
-      gigDate.setHours(hours, minutes);
-    }
-
-    const update = {
-      venue: body.venue || "",
-      date: gigDate,
-      startTime: body.startTime || null,
-      description: body.description || "",
-      fee: Number(body.fee) || 0,
-      privateEvent: !!body.privateEvent,
-      postersNeeded: !!body.postersNeeded,
-    };
-
-    const r = await col.findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: update },
-      { returnDocument: "after" }
-    );
-
-    if (!r || !r.value) return res.status(404).json({ error: "Not found" });
-
-    // Google Calendar sync
-    if (calendar) {
-      try {
-        const event = {
-          summary: `Gig at ${body.venue}`,
-          description: body.description,
-          start: { dateTime: gigDate.toISOString() },
-          end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
-          reminders: {
-            useDefault: false,
-            overrides: [
-              { method: "email", minutes: 60 * 24 * 7 },
-              { method: "popup", minutes: 60 * 24 * 7 },
-            ],
-          },
-        };
-
-        if (r && r.value && r.value.calendarEventId) {
-          await calendar.events.update({
-            calendarId: calendarId,
-            eventId: r.value.calendarEventId,
-            requestBody: event,
-          });
-        } else {
-          const calendarRes = await calendar.events.insert({
-            calendarId: calendarId,
-            requestBody: event,
-          });
-          const eventId = calendarRes.data.id;
-          if (eventId) {
-            await col.updateOne({ _id: new ObjectId(id) }, { $set: { calendarEventId: eventId } });
-          }
-        }
-      } catch (e) {
-        console.error(`Error updating/creating calendar event:`, e);
-      }
-    }
-
-    return res.status(200).json({
-      ...r.value,
-      _id: r.value._id.toString(),
-    });
+  const gigDate = new Date(body.date);
+  if (body.startTime) {
+    const [hours, minutes] = body.startTime.split(":").map(Number);
+    gigDate.setHours(hours, minutes);
   }
+
+  const update = {
+    venue: body.venue || "",
+    date: gigDate,
+    startTime: body.startTime || null,
+    description: body.description || "",
+    fee: Number(body.fee) || 0,
+    privateEvent: !!body.privateEvent,
+    postersNeeded: !!body.postersNeeded,
+  };
+
+  const r = await col.findOneAndUpdate(
+    { _id: new ObjectId(id) },
+    { $set: update },
+    { returnDocument: "after" }
+  );
+
+  if (!r || !r.value) return res.status(404).json({ error: "Not found" });
+
+  // Google Calendar sync
+  console.log("Calendar object present:", !!calendar);
+  if (calendar) {
+    try {
+      const event = {
+        summary: `Gig at ${body.venue}`,
+        description: body.description,
+        start: { dateTime: gigDate.toISOString() },
+        end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
+        reminders: {
+          useDefault: false,
+          overrides: [
+            { method: "email", minutes: 60 * 24 * 7 },
+            { method: "popup", minutes: 60 * 24 * 7 },
+          ],
+        },
+      };
+
+      if (r.value.calendarEventId) {
+        console.log("Updating existing calendar event:", r.value.calendarEventId, event);
+        const updateRes = await calendar.events.update({
+          calendarId: calendarId,
+          eventId: r.value.calendarEventId,
+          requestBody: event,
+        });
+        console.log("Calendar update response:", updateRes.data);
+      } else {
+        console.log("Inserting new calendar event:", event);
+        const insertRes = await calendar.events.insert({
+          calendarId: calendarId,
+          requestBody: event,
+        });
+        console.log("Calendar insert response:", insertRes.data);
+        const eventId = insertRes.data.id;
+        if (eventId) {
+          await col.updateOne({ _id: new ObjectId(id) }, { $set: { calendarEventId: eventId } });
+        }
+      }
+    } catch (e: any) {
+      console.error("Error updating/creating calendar event:", e.errors || e);
+    }
+  }
+
+  return res.status(200).json({
+    ...r.value,
+    _id: r.value._id.toString(),
+  });
+}
+
 
   // DELETE — remove from DB + calendar
   if (method === "DELETE") {
