@@ -24,6 +24,7 @@ function getCalendarClient() {
 
   // Parse the decoded JSON string into an object
   const creds = JSON.parse(decoded);
+console.log(creds.private_key.includes("\n"));
 
   const auth = new google.auth.JWT({
     email: creds.client_email,
