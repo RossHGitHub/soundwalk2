@@ -43,6 +43,7 @@ export default function Admin() {
     postersNeeded: false,
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
+  const [showFutureOnly, setShowFutureOnly] = useState(true);
 
   useEffect(() => {
     fetchGigs();
@@ -62,27 +63,24 @@ export default function Admin() {
     setLoading(false);
   }
 
- function openModal(gig: Gig | null = null) {
-  if (gig) {
-    setCurrentGig(gig);
-    setFormData({
-      ...gig,
-      _id: gig._id, // preserve the Mongo _id so PUT works
-    });
-  } else {
-    setCurrentGig(null);
-    setFormData({
-      venue: "",
-      date: "",
-      startTime: "",
-      description: "",
-      fee: "",
-      privateEvent: false,
-      postersNeeded: false,
-    });
+  function openModal(gig: Gig | null = null) {
+    if (gig) {
+      setCurrentGig(gig);
+      setFormData({ ...gig, _id: gig._id });
+    } else {
+      setCurrentGig(null);
+      setFormData({
+        venue: "",
+        date: "",
+        startTime: "",
+        description: "",
+        fee: "",
+        privateEvent: false,
+        postersNeeded: false,
+      });
+    }
+    setIsOpen(true);
   }
-  setIsOpen(true);
-}
 
   function closeModal() {
     setIsOpen(false);
@@ -99,14 +97,16 @@ export default function Admin() {
             ? (e.target as HTMLInputElement).checked
             : value,
       };
-      if (name === "venue" && value.length > 0) {
-        const uniqueVenues = Array.from(new Set(gigs.map((g) => g.venue)));
-        const suggestions = uniqueVenues.filter((v) =>
-          v.toLowerCase().startsWith(value.toLowerCase())
-        );
-        setVenueSuggestions(suggestions);
-      } else if (name === "venue" && value.length === 0) {
-        setVenueSuggestions([]);
+      if (name === "venue") {
+        if (value.length > 0) {
+          const uniqueVenues = Array.from(new Set(gigs.map((g) => g.venue)));
+          const suggestions = uniqueVenues.filter((v) =>
+            v.toLowerCase().startsWith(value.toLowerCase())
+          );
+          setVenueSuggestions(suggestions);
+        } else {
+          setVenueSuggestions([]);
+        }
       }
       return updatedData;
     });
@@ -116,39 +116,33 @@ export default function Admin() {
     setFormData((prev) => ({ ...prev, venue }));
     setVenueSuggestions([]);
   }
-  
-async function saveGig(e: FormEvent) {
-  e.preventDefault();
-  const method = currentGig ? "PUT" : "POST";
-  const payload = {
-    ...formData,
-    fee: Number(formData.fee),
-    id: formData._id || currentGig?._id || undefined,
-  };
-  try {
-    const res = await fetch("../api/gigs", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if ([200, 201, 204].includes(res.status)) {
-      await fetchGigs();
-      closeModal();
-    } else {
-      alert("Failed to save gig: The server responded with an error.");
+
+  async function saveGig(e: FormEvent) {
+    e.preventDefault();
+    const method = currentGig ? "PUT" : "POST";
+    const payload = { ...formData, fee: Number(formData.fee), id: formData._id || currentGig?._id || undefined };
+    try {
+      const res = await fetch("../api/gigs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if ([200, 201, 204].includes(res.status)) {
+        await fetchGigs();
+        closeModal();
+      } else {
+        alert("Failed to save gig: The server responded with an error.");
+      }
+    } catch (error) {
+      alert("Failed to save gig: An error occurred during the request.");
     }
-  } catch (error) {
-    alert("Failed to save gig: An error occurred during the request.");
   }
-}
 
   async function deleteGig() {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
     try {
-      const res = await fetch(`../api/gigs?id=${currentGig._id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`../api/gigs?id=${currentGig._id}`, { method: "DELETE" });
       if ([200, 204].includes(res.status)) {
         await fetchGigs();
         closeModal();
@@ -174,12 +168,7 @@ async function saveGig(e: FormEvent) {
 
   function formatDate(dateString: string) {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
   }
 
   function formatTime(timeString?: string) {
@@ -188,24 +177,35 @@ async function saveGig(e: FormEvent) {
     return `${hours}:${minutes}`;
   }
 
+  const filteredGigs = showFutureOnly
+    ? gigs.filter((g) => new Date(g.date) >= new Date())
+    : gigs;
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
-      <div className="flex justify-end mb-8">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="futureToggle">Show future gigs only</Label>
+          <Checkbox
+            id="futureToggle"
+            checked={showFutureOnly}
+            onCheckedChange={(checked) => setShowFutureOnly(!!checked)}
+          />
+        </div>
         <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
           Add Gig
         </Button>
       </div>
+
       {loading ? (
         <p>Loading gigs...</p>
-      ) : gigs.length === 0 ? (
+      ) : filteredGigs.length === 0 ? (
         <p>No gigs booked yet.</p>
       ) : (
-        Object.entries(groupGigsByDate(gigs)).map(([year, months]) => (
+        Object.entries(groupGigsByDate(filteredGigs)).map(([year, months]) => (
           <section key={year} className="mb-20">
-            <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
-              {year}
-            </h2>
+            <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">{year}</h2>
             {Object.entries(months).map(([month, monthGigs]) => (
               <div key={month} className="mb-12">
                 <h3 className="text-2xl font-semibold mb-6">{month}</h3>
@@ -218,26 +218,19 @@ async function saveGig(e: FormEvent) {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
-                        <span className="text-sm text-muted-foreground">
-                          {formatDate(gig.date)}
-                        </span>
+                        <span className="text-sm text-muted-foreground">{formatDate(gig.date)}</span>
                       </div>
-                         {gig.postersNeeded && (
-                        <div className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                      {gig.postersNeeded && (
+                        <div className="absolute top-[2px] right-[2px] bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
                           Posters Needed!
                         </div>
                       )}
                       {gig.startTime && (
-                        <p className="text-sm text-emerald-300 mb-2">
-                          Start: {formatTime(gig.startTime)}
-                        </p>
+                        <p className="text-sm text-emerald-300 mb-2">Start: {formatTime(gig.startTime)}</p>
                       )}
-                      {gig.description && (
-                        <p className="text-muted-foreground mb-4">{gig.description}</p>
-                      )}
+                      {gig.description && <p className="text-muted-foreground mb-4">{gig.description}</p>}
                       <div className="flex justify-between items-end">
                         <p className="text-xl text-emerald-400">£{gig.fee}</p>
-                       
                       </div>
                     </div>
                   ))}
@@ -249,32 +242,30 @@ async function saveGig(e: FormEvent) {
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[500px] bg-gray-800 text-white">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{currentGig ? "Edit Gig" : "Add Gig"}</DialogTitle>
             <DialogDescription>
-              Use this form to {currentGig ? "edit the gig details" : "add a new gig"}.
+              {currentGig ? "Update your gig details below." : "Enter details for your new gig."}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={saveGig} className="space-y-4 mt-2">
-            <div>
+          <form onSubmit={saveGig} className="space-y-4">
+            <div className="relative">
               <Label htmlFor="venue">Venue</Label>
               <Input
                 id="venue"
                 name="venue"
-                type="text"
                 value={formData.venue}
                 onChange={handleChange}
-                required
-                autoFocus
+                autoComplete="off"
               />
               {venueSuggestions.length > 0 && (
-                <ul className="border border-t-0 border-gray-600 rounded-b-lg max-h-48 overflow-y-auto">
+                <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-10">
                   {venueSuggestions.map((venue) => (
                     <li
                       key={venue}
-                      className="p-2 cursor-pointer hover:bg-emerald-800"
                       onClick={() => handleVenueSuggestionClick(venue)}
+                      className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                     >
                       {venue}
                     </li>
@@ -282,83 +273,54 @@ async function saveGig(e: FormEvent) {
                 </ul>
               )}
             </div>
+
             <div>
               <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                name="date"
-                type="date"
-                value={formData.date}
-                onChange={handleChange}
-                required
-              />
+              <Input type="date" id="date" name="date" value={formData.date} onChange={handleChange} />
             </div>
+
             <div>
               <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                id="startTime"
-                name="startTime"
-                type="time"
-                step={900} // 900 seconds = 15 minutes
-                value={formData.startTime || ""}
-                onChange={handleChange}
-              />
+              <Input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} />
             </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description || ""}
-                onChange={handleChange}
-              />
-            </div>
+
             <div>
               <Label htmlFor="fee">Fee (£)</Label>
-              <Input
-                id="fee"
-                name="fee"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.fee || ""}
-                onChange={handleChange}
+              <Input type="number" id="fee" name="fee" value={formData.fee} onChange={handleChange} />
+            </div>
+
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea id="description" name="description" value={formData.description} onChange={handleChange} />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="privateEvent"
+                name="privateEvent"
+                checked={formData.privateEvent}
+                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, privateEvent: !!checked }))}
               />
+              <Label htmlFor="privateEvent">Private Event</Label>
             </div>
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="privateEvent"
-                  checked={!!formData.privateEvent}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, privateEvent: !!checked }))
-                  }
-                />
-                <Label htmlFor="privateEvent">Private Event</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="postersNeeded"
-                  checked={!!formData.postersNeeded}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))
-                  }
-                />
-                <Label htmlFor="postersNeeded">Posters Needed</Label>
-              </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="postersNeeded"
+                name="postersNeeded"
+                checked={formData.postersNeeded}
+                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))}
+              />
+              <Label htmlFor="postersNeeded">Posters Needed</Label>
             </div>
-            <DialogFooter className="flex justify-between items-center">
-              <Button type="button" variant="outline" onClick={closeModal}>
-                Cancel
-              </Button>
-              <div className="flex space-x-2">
-                {currentGig && (
-                  <Button type="button" variant="destructive" onClick={deleteGig}>
-                    Delete
-                  </Button>
-                )}
-                <Button type="submit">{currentGig ? "Save" : "Add"}</Button>
-              </div>
+
+            <DialogFooter className="flex justify-between">
+              {currentGig && (
+                <Button type="button" variant="destructive" onClick={deleteGig}>
+                  Delete
+                </Button>
+              )}
+              <Button type="submit">{currentGig ? "Save Changes" : "Add Gig"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
