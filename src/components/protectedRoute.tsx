@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const token = localStorage.getItem("token"); // JWT stored in localStorage
+  const token = localStorage.getItem("auth-token"); // JWT stored in localStorage
 
   if (!token) {
     // Redirect to login if no token
