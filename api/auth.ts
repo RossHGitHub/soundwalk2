@@ -20,14 +20,14 @@ async function getDb() {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
+  const { user_id, password } = req.body;
+  if (!user_id || !password) return res.status(400).json({ error: "Missing credentials" });
 
   try {
     const db = await getDb();
     const col = db.collection("users"); // keep it as 'users'
 
-    const user = await col.findOne({ username });
+    const user = await col.findOne({ user_id });
     if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
