@@ -33,11 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign(
-      { id: user._id.toString(), username: user.username },
-      JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+  const token = jwt.sign(
+  { id: user._id.toString(), username: user.user_id },
+  JWT_SECRET,
+  { expiresIn: "1d" }
+);
 
     return res.status(200).json({ token });
   } catch (err) {
