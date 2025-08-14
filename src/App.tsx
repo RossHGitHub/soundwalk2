@@ -5,7 +5,7 @@ import Gigs from "./pages/Gigs";
 import MediaPage from "./pages/Media";
 import ContactPage from "./pages/Contact";
 import Admin from "./pages/Admin";
-import Login from "./pages/login";
+import Login from "./pages/Login";
 import ProtectedRoute from "./components/protectedRoute";
 
 function App() {
@@ -13,18 +13,18 @@ function App() {
     <Routes>
       <Route path="/" element={<Layout />}>
         <Route index element={<Home />} />
-        <Route path="Gigs" element={<Gigs />} />
-        <Route path="Contact" element={<ContactPage />} />
-        <Route path="Media" element={<MediaPage />} />
+        <Route path="gigs" element={<Gigs />} />
+        <Route path="contact" element={<ContactPage />} />
+        <Route path="media" element={<MediaPage />} />
         <Route
-          path="Admin"
+          path="admin"
           element={
             <ProtectedRoute>
               <Admin />
             </ProtectedRoute>
           }
         />
-        <Route path="Login" element={<Login />} />
+        <Route path="login" element={<Login />} />
       </Route>
     </Routes>
   );

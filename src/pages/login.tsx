@@ -24,7 +24,7 @@ export default function Login() {
 
             const { token } = await res.json();
             localStorage.setItem('auth-token', token);
-            navigate('/Admin');
+            navigate('/admin');
         } catch (err) {
             setError('Something went wrong');
         }
