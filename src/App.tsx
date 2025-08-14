@@ -5,6 +5,8 @@ import Gigs from "./pages/Gigs";
 import MediaPage from "./pages/Media";
 import ContactPage from "./pages/Contact";
 import Admin from "./pages/Admin";
+import Login from "./pages/login";
+import ProtectedRoute from "./components/protectedRoute";
 
 function App() {
   return (
@@ -14,7 +16,15 @@ function App() {
         <Route path="Gigs" element={<Gigs />} />
         <Route path="Contact" element={<ContactPage />} />
         <Route path="Media" element={<MediaPage />} />
-        <Route path="Admin" element={<Admin />} />
+        <Route
+          path="Admin"
+          element={
+            <ProtectedRoute>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="Login" element={<Login />} />
       </Route>
     </Routes>
   );

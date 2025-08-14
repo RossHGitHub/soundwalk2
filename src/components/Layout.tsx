@@ -5,6 +5,8 @@ import logo from '../assets/img/logo.jpg';
 import { useEffect } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa"
 
+
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 

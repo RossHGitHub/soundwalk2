@@ -9,11 +9,11 @@ import BarryProfile from "../assets/img/BarryProfile.jpg"
 export default function HomePage() {
     console.log(promoVideo)
   return (
+    
     <main className="flex flex-col min-h-screen bg-background text-foreground">
     
-
-      {/* Hero Section */}
-     <section className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden">
+  {/* Hero Section */}
+ <section className="relative w-full h-[300px] sm:h-[400px] md:h-[500px] overflow-hidden">
   <video
     src={promoVideo}
     autoPlay
