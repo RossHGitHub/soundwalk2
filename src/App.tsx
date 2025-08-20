@@ -5,7 +5,7 @@ import Gigs from "./pages/Gigs";
 import MediaPage from "./pages/Media";
 import ContactPage from "./pages/Contact";
 import Admin from "./pages/Admin";
-import Login from "./pages/Login";
+import Login from "./pages/login";
 import ProtectedRoute from "./components/protectedRoute";
 
 function App() {
