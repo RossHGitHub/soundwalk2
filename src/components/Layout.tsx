@@ -1,9 +1,10 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils'; // shadcn helper
 import { Home, Calendar, Video, Phone } from 'lucide-react';
-import logo from '../assets/img/logo.jpg';
+//import logo from '../assets/img/logo.jpg';
 import { useEffect } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa"
+import logoTransparent from '../assets/img/logo-Photoroom.png';
 
 
 
@@ -32,12 +33,12 @@ export default function Layout() {
          <ScrollToTop />
         <header className="md:hidden sticky top-0 z-50 bg-background shadow border-b py-3">
   <div className="flex justify-center">
-    <img src={logo} alt="Soundwalk logo" className="h-20" />
+    <img src={logoTransparent} alt="Soundwalk logo" className="h-20" />
   </div>
 </header>
       {/* Top bar (desktop) */}
       <nav className="hidden md:flex sticky top-0 z-50 bg-background justify-between items-center px-6 py-4 shadow border-b">
-      <img src={logo} alt="Soundwalk logo" className="h-20" />
+      <img src={logoTransparent} alt="Soundwalk logo" className="h-20" />
         <div className="flex gap-5">
           {navItems.map(({ name, path }) => (
             <Link

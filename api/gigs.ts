@@ -116,111 +116,99 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // PUT — update gig + update/create calendar event
- if (method === "PUT") {
-  const body = req.body;
-  const id = body.id || body._id;
-  if (!id) return res.status(400).json({ error: "Missing id" });
-  if (!ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid id" });
+  if (method === "PUT") {
+    const body = req.body;
+    const id = body.id || body._id;
+    if (!id) return res.status(400).json({ error: "Missing id" });
 
-  const gigDate = new Date(body.date);
-  if (body.startTime) {
-    const [hours, minutes] = body.startTime.split(":").map(Number);
-    gigDate.setHours(hours, minutes);
-  }
+    const gigDate = new Date(body.date);
+    if (body.startTime) {
+      const [hours, minutes] = body.startTime.split(":").map(Number);
+      gigDate.setHours(hours, minutes);
+    }
 
-  const update = {
-    venue: body.venue || "",
-    date: gigDate,
-    startTime: body.startTime || null,
-    description: body.description || "",
-    fee: Number(body.fee) || 0,
-    privateEvent: !!body.privateEvent,
-    postersNeeded: !!body.postersNeeded,
-  };
+    const update = {
+      venue: body.venue || "",
+      date: gigDate,
+      startTime: body.startTime || null,
+      description: body.description || "",
+      fee: Number(body.fee) || 0,
+      privateEvent: !!body.privateEvent,
+      postersNeeded: !!body.postersNeeded,
+    };
 
-  // Update the gig in MongoDB
-  const r = await col.findOneAndUpdate(
-    { _id: new ObjectId(id) },
-    { $set: update },
-    { returnDocument: "after" }
-  );
+    const r = await col.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      { $set: update },
+      { returnDocument: "after" }
+    );
 
-  // If findOneAndUpdate returns null, fetch manually
-  let updatedGig = r?.value;
-  if (!updatedGig) {
-    updatedGig = await col.findOne({ _id: new ObjectId(id) });
-    if (!updatedGig) return res.status(404).json({ error: "Not found" });
-  }
+    if (!r || !r.value) return res.status(404).json({ error: "Not found" });
 
-  // Google Calendar sync
-  if (calendar) {
-    try {
-      const event = {
-        summary: `Gig at ${body.venue}`,
-        description: body.description,
-        start: { dateTime: gigDate.toISOString() },
-        end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
-        reminders: {
-          useDefault: false,
-          overrides: [
-            { method: "email", minutes: 60 * 24 * 7 },
-            { method: "popup", minutes: 60 * 24 * 7 },
-          ],
-        },
-      };
+    // Google Calendar sync
+    if (calendar) {
+      try {
+        const event = {
+          summary: `Gig at ${body.venue}`,
+          description: body.description,
+          start: { dateTime: gigDate.toISOString() },
+          end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: "email", minutes: 60 * 24 * 7 },
+              { method: "popup", minutes: 60 * 24 * 7 },
+            ],
+          },
+        };
 
-      if (updatedGig.calendarEventId) {
-        // Update existing calendar event
-        try {
-          const updateRes = await calendar.events.update({
-            calendarId: calendarId,
-            eventId: updatedGig.calendarEventId,
-            requestBody: event,
-          });
-          console.log("Calendar update response:", updateRes.data);
-        } catch (err: any) {
-          if (err.code === 404) {
-            // If the event is missing, create a new one
-            const insertRes = await calendar.events.insert({
-              calendarId: calendarId,
+        let calendarEventId = r.value.calendarEventId;
+
+        if (calendarEventId) {
+          try {
+            await calendar.events.update({
+              calendarId,
+              eventId: calendarEventId,
               requestBody: event,
             });
-            const eventId = insertRes.data.id;
-            if (eventId) {
-              await col.updateOne(
-                { _id: new ObjectId(id) },
-                { $set: { calendarEventId: eventId } }
-              );
-              updatedGig.calendarEventId = eventId;
+          } catch (err: any) {
+            if (err.code === 404) {
+              console.warn(`Event ${calendarEventId} not found, creating new one.`);
+              const insertRes = await calendar.events.insert({
+                calendarId,
+                requestBody: event,
+              });
+              calendarEventId = insertRes.data.id || null;
+            } else {
+              throw err;
             }
-          } else {
-            throw err;
           }
+        } else {
+          const insertRes = await calendar.events.insert({
+            calendarId,
+            requestBody: event,
+          });
+          calendarEventId = insertRes.data.id || null;
         }
-      } else {
-        // Create a new calendar event
-        const insertRes = await calendar.events.insert({
-          calendarId: calendarId,
-          requestBody: event,
-        });
-        const eventId = insertRes.data.id;
-        if (eventId) {
-          await col.updateOne({ _id: new ObjectId(id) }, { $set: { calendarEventId: eventId } });
-          updatedGig.calendarEventId = eventId;
+
+        // Update calendarEventId in DB if it changed
+        if (calendarEventId && calendarEventId !== r.value.calendarEventId) {
+          await col.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { calendarEventId } }
+          );
+          r.value.calendarEventId = calendarEventId;
         }
+      } catch (e: any) {
+        console.error("Error updating/creating calendar event:", e.errors || e);
       }
-    } catch (e: any) {
-      console.error("Error updating/creating calendar event:", e.errors || e);
     }
+
+    return res.status(200).json({
+      ...r.value,
+      _id: r.value._id.toString(),
+    });
   }
-
-  return res.status(200).json({
-    ...updatedGig,
-    _id: updatedGig._id.toString(),
-  });
-}
-
-
 
   // DELETE — remove from DB + calendar
   if (method === "DELETE") {
