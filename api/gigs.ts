@@ -5,7 +5,7 @@ import { google } from "googleapis";
 const uri = process.env.MONGODB_URI!;
 const dbName = process.env.MONGODB_DB!;
 let client: MongoClient | null = null;
-const calendarId = "soundwalkband@gmail.com";
+const calendarId = "soundwalkgigs@gmail.com";
 
 async function getDb() {
   if (!client) {
