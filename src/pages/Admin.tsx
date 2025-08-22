@@ -117,26 +117,33 @@ export default function Admin() {
     setVenueSuggestions([]);
   }
 
-  async function saveGig(e: FormEvent) {
-    e.preventDefault();
-    const method = currentGig ? "PUT" : "POST";
-    const payload = { ...formData, fee: Number(formData.fee), id: formData._id || currentGig?._id || undefined };
-    try {
-      const res = await fetch("../api/gigs", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if ([200, 201, 204].includes(res.status)) {
-        await fetchGigs();
-        closeModal();
-      } else {
-        alert("Failed to save gig: The server responded with an error.");
-      }
-    } catch (error) {
-      alert("Failed to save gig: An error occurred during the request.");
+async function saveGig(e: FormEvent) {
+  e.preventDefault();
+
+  const method = currentGig ? "PUT" : "POST";
+  const payload = {
+    ...formData,
+    fee: Number(formData.fee),
+    id: currentGig?._id || undefined, // always use currentGig._id
+  };
+
+  try {
+    const res = await fetch("../api/gigs", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if ([200, 201, 204].includes(res.status)) {
+      await fetchGigs();
+      closeModal();
+    } else {
+      alert("Failed to save gig: The server responded with an error.");
     }
+  } catch (error) {
+    alert("Failed to save gig: An error occurred during the request.");
   }
+}
 
   async function deleteGig() {
     if (!currentGig?._id) return;
@@ -242,7 +249,7 @@ export default function Admin() {
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-gray-800">
           <DialogHeader>
             <DialogTitle>{currentGig ? "Edit Gig" : "Add Gig"}</DialogTitle>
             <DialogDescription>

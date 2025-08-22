@@ -86,8 +86,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: { dateTime: gigDate.toISOString() },
-          end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
+          start: {
+            dateTime: gigDate.toISOString(),
+            timeZone: "Europe/London",
+          },
+          end: {
+            dateTime: new Date(gigDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+            timeZone: "Europe/London",
+          },
           colorId: "5", // Banana Yellow 🍌
           reminders: {
             useDefault: false,
@@ -151,8 +157,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: { dateTime: gigDate.toISOString() },
-          end: { dateTime: new Date(gigDate.getTime() + 3 * 60 * 60 * 1000).toISOString() },
+          start: {
+            dateTime: gigDate.toISOString(),
+            timeZone: "Europe/London",
+          },
+          end: {
+            dateTime: new Date(gigDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+            timeZone: "Europe/London",
+          },
           reminders: {
             useDefault: false,
             overrides: [
