@@ -15,6 +15,29 @@ async function getDb() {
   return client.db(dbName);
 }
 
+function toRFC3339(date: Date) {
+  const tzOffset = -date.getTimezoneOffset(); // in minutes
+  const diff = tzOffset >= 0 ? "+" : "-";
+  const pad = (n: number) => String(Math.floor(Math.abs(n))).padStart(2, "0");
+  return (
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1) +
+    "-" +
+    pad(date.getDate()) +
+    "T" +
+    pad(date.getHours()) +
+    ":" +
+    pad(date.getMinutes()) +
+    ":00" +
+    diff +
+    pad(tzOffset / 60) +
+    ":" +
+    pad(tzOffset % 60)
+  );
+}
+
+
 // Google Calendar setup (only if creds exist)
 function getCalendarClient() {
   if (!process.env.GOOGLE_CREDENTIALS) return null;
@@ -86,14 +109,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: {
-            dateTime: gigDate.toISOString(),
-            timeZone: "Europe/London",
-          },
-          end: {
-            dateTime: new Date(gigDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-            timeZone: "Europe/London",
-          },
+          start: { dateTime: toRFC3339(gigDate), timeZone: "Europe/London" },
+          end: { dateTime: toRFC3339(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
           colorId: "5", // Banana Yellow 🍌
           reminders: {
             useDefault: false,
@@ -124,7 +141,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // PUT — update gig + update/create calendar event
   if (method === "PUT") {
     const body = req.body;
-    const id = body.id || body._id;
+    const id = body._id;
+    console.log("Updating gig with id:", id);
     if (!id) return res.status(400).json({ error: "Missing id" });
 
     const gigDate = new Date(body.date);
@@ -157,14 +175,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: {
-            dateTime: gigDate.toISOString(),
-            timeZone: "Europe/London",
-          },
-          end: {
-            dateTime: new Date(gigDate.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-            timeZone: "Europe/London",
-          },
+          start: { dateTime: toRFC3339(gigDate), timeZone: "Europe/London" },
+          end: { dateTime: toRFC3339(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
           reminders: {
             useDefault: false,
             overrides: [
