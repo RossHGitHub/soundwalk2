@@ -124,7 +124,7 @@ async function saveGig(e: FormEvent) {
   const payload = {
     ...formData,
     fee: Number(formData.fee),
-    id: currentGig?._id || undefined, // always use currentGig._id
+    _id: currentGig?._id || undefined,
   };
 
   try {

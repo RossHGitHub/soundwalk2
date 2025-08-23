@@ -57,10 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // POST — create gig + calendar event
   if (method === "POST") {
     const body = req.body;
-    const gigDate = new Date(body.date);
+    let gigDate = DateTime.fromISO(body.date, { zone: "Europe/London" });
     if (body.startTime) {
       const [hours, minutes] = body.startTime.split(":").map(Number);
-      gigDate.setHours(hours, minutes);
+      gigDate = gigDate.set({ hour: hours, minute: minutes });
     }
 
     const newGig = {
@@ -82,8 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: { dateTime: toLondonISO(gigDate), timeZone: "Europe/London" },
-          end: { dateTime: toLondonISO(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
+          start: { dateTime: gigDate.toISO(), timeZone: "Europe/London" },
+          end: { dateTime: gigDate.plus({ hours: 2 }).toISO(), timeZone: "Europe/London" },
           colorId: "5",
           reminders: {
             useDefault: false,
