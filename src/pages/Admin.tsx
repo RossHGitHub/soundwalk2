@@ -51,7 +51,7 @@ export default function Admin() {
 
   async function fetchGigs() {
     setLoading(true);
-    const res = await fetch("../api/gigs");
+    const res = await fetch("/api/gigs");
     const data = await res.json();
     setGigs(
       data.map((gig: any) => ({
@@ -128,7 +128,7 @@ async function saveGig(e: FormEvent) {
   };
 
   try {
-    const res = await fetch("../api/gigs", {
+    const res = await fetch("/api/gigs", {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -149,7 +149,7 @@ async function saveGig(e: FormEvent) {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
     try {
-      const res = await fetch(`../api/gigs?id=${currentGig._id}`, { method: "DELETE" });
+      const res = await fetch(`/api/gigs?id=${currentGig._id}`, { method: "DELETE" });
       if ([200, 204].includes(res.status)) {
         await fetchGigs();
         closeModal();

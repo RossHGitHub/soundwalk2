@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { MongoClient, ObjectId } from "mongodb";
 import { google } from "googleapis";
+import { DateTime } from "luxon";
 
 const uri = process.env.MONGODB_URI!;
 const dbName = process.env.MONGODB_DB!;
@@ -15,39 +16,12 @@ async function getDb() {
   return client.db(dbName);
 }
 
-function toRFC3339(date: Date) {
-  const tzOffset = -date.getTimezoneOffset(); // in minutes
-  const diff = tzOffset >= 0 ? "+" : "-";
-  const pad = (n: number) => String(Math.floor(Math.abs(n))).padStart(2, "0");
-  return (
-    date.getFullYear() +
-    "-" +
-    pad(date.getMonth() + 1) +
-    "-" +
-    pad(date.getDate()) +
-    "T" +
-    pad(date.getHours()) +
-    ":" +
-    pad(date.getMinutes()) +
-    ":00" +
-    diff +
-    pad(tzOffset / 60) +
-    ":" +
-    pad(tzOffset % 60)
-  );
-}
-
-
-// Google Calendar setup (only if creds exist)
+// Google Calendar setup
 function getCalendarClient() {
   if (!process.env.GOOGLE_CREDENTIALS) return null;
 
-  // Decode the base64-encoded credentials string
   const decoded = Buffer.from(process.env.GOOGLE_CREDENTIALS, "base64").toString("utf-8");
-
-  // Parse the decoded JSON string into an object
   const creds = JSON.parse(decoded);
-  console.log(creds.private_key.includes("\n"));
 
   const auth = new google.auth.JWT({
     email: creds.client_email,
@@ -58,17 +32,18 @@ function getCalendarClient() {
   return google.calendar({ version: "v3", auth });
 }
 
-
+// Helper: convert JS Date to Europe/London ISO string with Luxon
+function toLondonISO(date: Date) {
+  return DateTime.fromJSDate(date).setZone("Europe/London").toISO();
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const db = await getDb();
   const col = db.collection("gigs");
   const method = req.method;
   const calendar = getCalendarClient();
-  console.log("GOOGLE_CREDENTIALS length:", process.env.GOOGLE_CREDENTIALS?.length);
-  console.log("Calendar object:", calendar);
 
-  // GET gigs — no Google auth required
+  // GET gigs
   if (method === "GET") {
     const gigs = await col.find().sort({ date: 1 }).toArray();
     return res.status(200).json(
@@ -83,8 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (method === "POST") {
     const body = req.body;
     const gigDate = new Date(body.date);
-    console.log("POST request hit with body:", body);
-
     if (body.startTime) {
       const [hours, minutes] = body.startTime.split(":").map(Number);
       gigDate.setHours(hours, minutes);
@@ -109,9 +82,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: { dateTime: toRFC3339(gigDate), timeZone: "Europe/London" },
-          end: { dateTime: toRFC3339(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
-          colorId: "5", // Banana Yellow 🍌
+          start: { dateTime: toLondonISO(gigDate), timeZone: "Europe/London" },
+          end: { dateTime: toLondonISO(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
+          colorId: "5",
           reminders: {
             useDefault: false,
             overrides: [
@@ -122,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
 
         const calendarRes = await calendar.events.insert({
-          calendarId: calendarId,
+          calendarId,
           requestBody: event,
         });
         const eventId = calendarRes.data.id;
@@ -138,11 +111,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ ...newGig, _id: r.insertedId.toString() });
   }
 
-  // PUT — update gig + update/create calendar event
+  // PUT — update gig + calendar event
   if (method === "PUT") {
     const body = req.body;
     const id = body._id;
-    console.log("Updating gig with id:", id);
     if (!id) return res.status(400).json({ error: "Missing id" });
 
     const gigDate = new Date(body.date);
@@ -175,8 +147,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const event = {
           summary: `Gig at ${body.venue}`,
           description: body.description,
-          start: { dateTime: toRFC3339(gigDate), timeZone: "Europe/London" },
-          end: { dateTime: toRFC3339(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
+          start: { dateTime: toLondonISO(gigDate), timeZone: "Europe/London" },
+          end: { dateTime: toLondonISO(new Date(gigDate.getTime() + 2 * 60 * 60 * 1000)), timeZone: "Europe/London" },
           reminders: {
             useDefault: false,
             overrides: [
@@ -215,12 +187,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           calendarEventId = insertRes.data.id || null;
         }
 
-        // Update calendarEventId in DB if it changed
         if (calendarEventId && calendarEventId !== r.value.calendarEventId) {
-          await col.updateOne(
-            { _id: new ObjectId(id) },
-            { $set: { calendarEventId } }
-          );
+          await col.updateOne({ _id: new ObjectId(id) }, { $set: { calendarEventId } });
           r.value.calendarEventId = calendarEventId;
         }
       } catch (e: any) {
@@ -228,18 +196,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.status(200).json({
-      ...r.value,
-      _id: r.value._id.toString(),
-    });
+    return res.status(200).json({ ...r.value, _id: r.value._id.toString() });
   }
 
-  // DELETE — remove from DB + calendar
+  // DELETE — remove gig + calendar event
   if (method === "DELETE") {
     const { id } = req.query;
-    if (!id || typeof id !== "string") {
-      return res.status(400).json({ error: "Missing id" });
-    }
+    if (!id || typeof id !== "string") return res.status(400).json({ error: "Missing id" });
 
     const gig = await col.findOne({ _id: new ObjectId(id) });
     if (!gig) return res.status(404).json({ error: "Not found" });
@@ -249,7 +212,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (calendar && gig.calendarEventId) {
       try {
         await calendar.events.delete({
-          calendarId: calendarId,
+          calendarId,
           eventId: gig.calendarEventId,
         });
       } catch (e) {
