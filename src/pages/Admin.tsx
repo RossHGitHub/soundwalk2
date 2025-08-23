@@ -120,12 +120,19 @@ export default function Admin() {
 async function saveGig(e: FormEvent) {
   e.preventDefault();
 
+  if (!formData.date) {
+    alert("Please select a date");
+    return;
+  }
+
   const method = currentGig ? "PUT" : "POST";
-  const payload = {
+  const payload: any = {
     ...formData,
-    fee: Number(formData.fee),
-    _id: currentGig?._id || undefined,
+    fee: Number(formData.fee) || 0,
   };
+
+  // Only include _id for PUT
+  if (currentGig?._id) payload._id = currentGig._id;
 
   try {
     const res = await fetch("/api/gigs", {
@@ -138,12 +145,16 @@ async function saveGig(e: FormEvent) {
       await fetchGigs();
       closeModal();
     } else {
-      alert("Failed to save gig: The server responded with an error.");
+      const errorData = await res.json();
+      console.error("Error response:", errorData);
+      alert(`Failed to save gig: ${errorData.error || "Server error"}`);
     }
   } catch (error) {
+    console.error(error);
     alert("Failed to save gig: An error occurred during the request.");
   }
 }
+
 
   async function deleteGig() {
     if (!currentGig?._id) return;
