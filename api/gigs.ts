@@ -117,12 +117,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const id = body._id;
     if (!id) return res.status(400).json({ error: "Missing id" });
 
+    // Build the gig date with Luxon or JS Date
     const gigDate = new Date(body.date);
     if (body.startTime) {
       const [hours, minutes] = body.startTime.split(":").map(Number);
       gigDate.setHours(hours, minutes);
     }
 
+    // Prepare MongoDB update
     const update = {
       venue: body.venue || "",
       date: gigDate,
@@ -133,6 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       postersNeeded: !!body.postersNeeded,
     };
 
+    // Update in MongoDB
     const r = await col.findOneAndUpdate(
       { _id: new ObjectId(id) },
       { $set: update },
@@ -141,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!r || !r.value) return res.status(404).json({ error: "Not found" });
 
-    // Google Calendar sync
+    // Google Calendar sync — errors logged, never block response
     if (calendar) {
       try {
         const event = {
@@ -169,14 +172,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
           } catch (err: any) {
             if (err.code === 404) {
-              console.warn(`Event ${calendarEventId} not found, creating new one.`);
+              console.warn(`Google Calendar event ${calendarEventId} not found. Creating new one.`);
               const insertRes = await calendar.events.insert({
                 calendarId,
                 requestBody: event,
               });
               calendarEventId = insertRes.data.id || null;
             } else {
-              throw err;
+              console.error("Error updating calendar event:", err);
             }
           }
         } else {
@@ -187,17 +190,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           calendarEventId = insertRes.data.id || null;
         }
 
+        // Update MongoDB if new calendar event created
         if (calendarEventId && calendarEventId !== r.value.calendarEventId) {
           await col.updateOne({ _id: new ObjectId(id) }, { $set: { calendarEventId } });
           r.value.calendarEventId = calendarEventId;
         }
       } catch (e: any) {
-        console.error("Error updating/creating calendar event:", e.errors || e);
+        console.error("Error syncing Google Calendar:", e.errors || e);
       }
     }
 
+    // Always return success to frontend
     return res.status(200).json({ ...r.value, _id: r.value._id.toString() });
   }
+
 
   // DELETE — remove gig + calendar event
   if (method === "DELETE") {
