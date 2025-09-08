@@ -44,11 +44,12 @@ function toLondonISO(date: Date) {
   return DateTime.fromJSDate(date).setZone("Europe/London").toISO();
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: any, res: any) {
   const db = await getDb();
   const col = db.collection("gigs");
   const method = req.method;
   const calendar = getCalendarClient();
+  const calendarId = process.env.GOOGLE_CALENDAR_ID || requireEnv('GOOGLE_CALENDAR_ID');
 
   // GET gigs
   if (method === "GET") {
