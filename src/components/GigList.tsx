@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
 } from "../components/ui/dialog"
+import soundwalk_stack from "../assets/img/soundwalk_stack2.jpeg";
 type Gig = {
   _id?: string;
   venue: string;
@@ -45,10 +46,10 @@ export function GigList({ data }: GigListProps) {
                 {gigs.map((gig) => (
                   <Card
                     key={gig._id}
-                    className="p-6 hover:shadow-lg transition-shadow rounded-lg cursor-pointer border-emerald-600"
+                    className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
                     onClick={() => setSelectedGig(gig)}
                   >
-                    <div className="text-xl font-semibold mb-2">{gig.venue}</div>
+                    <div className="text-emerald-500 text-xl">{gig.venue}</div>
                     <div className="text-muted-foreground">{formatDate(gig.date)}</div>
                     <div className="text-muted-foreground">{gig.startTime}</div>
                   </Card>
@@ -64,7 +65,16 @@ export function GigList({ data }: GigListProps) {
       <div className="flex flex-col lg:flex-row h-full">
         {/* Map: Left on desktop, top on mobile */}
         <div className="lg:w-1/2 w-full h-64 lg:h-auto rounded-l-lg overflow-hidden bg-gray-300 flex items-center justify-center text-muted-foreground">
-          Map Placeholder for <strong>{selectedGig.venue}</strong>
+         <img
+            src={soundwalk_stack}
+            alt="Soundwalk Stack"
+            className="object-cover w-full h-full"
+          />
+         {/* <div className="text-center p-4">
+            <div className="text-xl font-semibold mb-2">{selectedGig.venue}</div>
+            <div className="mb-2">Date: {formatDate(selectedGig.date)}</div>
+            <div className="mb-2">Time: {selectedGig.startTime}</div>
+          </div> */}
         </div>
         {/* Info: Right on desktop, below on mobile */}
         <div className="lg:w-1/2 w-full p-6 flex flex-col justify-center rounded-r-lg">

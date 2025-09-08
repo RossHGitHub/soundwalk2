@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Button } from "../components/ui/button";
+  import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,7 @@ export default function Admin() {
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
   const [showFutureOnly, setShowFutureOnly] = useState(true);
+  const [saving, setSaving] = useState(false); // ← NEW
 
   useEffect(() => {
     fetchGigs();
@@ -79,12 +82,14 @@ export default function Admin() {
         postersNeeded: false,
       });
     }
+    setSaving(false); // reset
     setIsOpen(true);
   }
 
   function closeModal() {
     setIsOpen(false);
     setVenueSuggestions([]);
+    setSaving(false); // reset
   }
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -117,44 +122,46 @@ export default function Admin() {
     setVenueSuggestions([]);
   }
 
-async function saveGig(e: FormEvent) {
-  e.preventDefault();
+  async function saveGig(e: FormEvent) {
+    e.preventDefault();
 
-  if (!formData.date) {
-    alert("Please select a date");
-    return;
-  }
-
-  const method = currentGig ? "PUT" : "POST";
-  const payload: any = {
-    ...formData,
-    fee: Number(formData.fee) || 0,
-  };
-
-  // Only include _id for PUT
-  if (currentGig?._id) payload._id = currentGig._id;
-
-  try {
-    const res = await fetch("/api/gigs", {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if ([200, 201, 204].includes(res.status)) {
-      await fetchGigs();
-      closeModal();
-    } else {
-      const errorData = await res.json();
-      console.error("Error response:", errorData);
-      alert(`Failed to save gig: ${errorData.error || "Server error"}`);
+    if (!formData.date) {
+      alert("Please select a date");
+      return;
     }
-  } catch (error) {
-    console.error(error);
-    alert("Failed to save gig: An error occurred during the request.");
-  }
-}
 
+    setSaving(true); // ← NEW
+
+    const method = currentGig ? "PUT" : "POST";
+    const payload: any = {
+      ...formData,
+      fee: Number(formData.fee) || 0,
+    };
+
+    if (currentGig?._id) payload._id = currentGig._id;
+
+    try {
+      const res = await fetch("/api/gigs", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if ([200, 201, 204].includes(res.status)) {
+        await fetchGigs();
+        closeModal();
+      } else {
+        const errorData = await res.json();
+        console.error("Error response:", errorData);
+        alert(`Failed to save gig: ${errorData.error || "Server error"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to save gig: An error occurred during the request.");
+    } finally {
+      setSaving(false); // ← NEW
+    }
+  }
 
   async function deleteGig() {
     if (!currentGig?._id) return;
@@ -259,90 +266,147 @@ async function saveGig(e: FormEvent) {
         ))
       )}
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-[425px] bg-gray-800">
-          <DialogHeader>
-            <DialogTitle>{currentGig ? "Edit Gig" : "Add Gig"}</DialogTitle>
-            <DialogDescription>
-              {currentGig ? "Update your gig details below." : "Enter details for your new gig."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={saveGig} className="space-y-4">
-            <div className="relative">
-              <Label htmlFor="venue">Venue</Label>
-              <Input
-                id="venue"
-                name="venue"
-                value={formData.venue}
-                onChange={handleChange}
-                autoComplete="off"
-              />
-              {venueSuggestions.length > 0 && (
-                <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-10">
-                  {venueSuggestions.map((venue) => (
-                    <li
-                      key={venue}
-                      onClick={() => handleVenueSuggestionClick(venue)}
-                      className="px-3 py-1 cursor-pointer hover:bg-gray-200"
-                    >
-                      {venue}
-                    </li>
-                  ))}
-                </ul>
+
+<DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
+  <DialogPrimitive.Portal>
+    {/* Overlay BELOW content */}
+    <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-[1px]" />
+
+    {/* Content ABOVE overlay; force visible bg/text + centering */}
+    <DialogPrimitive.Content
+      className="fixed z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+                 w-full max-w-[425px] bg-gray-900 text-white rounded-lg border border-white/10
+                 shadow-xl p-6 sm:p-8 focus:outline-none"
+    >
+      {/* Saving overlay */}
+      {saving && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] grid place-items-center rounded-lg">
+          <div className="flex items-center gap-3">
+            <svg
+              className="animate-spin h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+            </svg>
+            <span>Saving…</span>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">{currentGig ? "Edit Gig" : "Add Gig"}</h2>
+        <p className="text-sm text-white/70">
+          {currentGig ? "Update your gig details below." : "Enter details for your new gig."}
+        </p>
+      </div>
+
+      {/* FORM (your existing fields unchanged) */}
+      <form onSubmit={saveGig} className="space-y-4" aria-busy={saving}>
+        {/* Venue */}
+        <div className="relative">
+          <Label htmlFor="venue">Venue</Label>
+          <Input id="venue" name="venue" value={formData.venue} onChange={handleChange} autoComplete="off" />
+          {venueSuggestions.length > 0 && (
+            <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-[110] rounded-md overflow-hidden">
+              {venueSuggestions.map((venue) => (
+                <li
+                  key={venue}
+                  onClick={() => handleVenueSuggestionClick(venue)}
+                  className="px-3 py-1 cursor-pointer hover:bg-gray-200"
+                >
+                  {venue}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Date */}
+        <div>
+          <Label htmlFor="date">Date</Label>
+          <Input type="date" id="date" name="date" value={formData.date} onChange={handleChange} />
+        </div>
+
+        {/* Start Time */}
+        <div>
+          <Label htmlFor="startTime">Start Time</Label>
+          <Input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} />
+        </div>
+
+        {/* Fee */}
+        <div>
+          <Label htmlFor="fee">Fee (£)</Label>
+          <Input type="number" id="fee" name="fee" value={formData.fee} onChange={handleChange} />
+        </div>
+
+        {/* Description */}
+        <div>
+          <Label htmlFor="description">Description</Label>
+          <Textarea id="description" name="description" value={formData.description} onChange={handleChange} />
+        </div>
+
+        {/* Toggles */}
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="privateEvent"
+            name="privateEvent"
+            checked={!!formData.privateEvent}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, privateEvent: !!checked }))}
+          />
+          <Label htmlFor="privateEvent">Private Event</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="postersNeeded"
+            name="postersNeeded"
+            checked={!!formData.postersNeeded}
+            onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))}
+          />
+          <Label htmlFor="postersNeeded">Posters Needed</Label>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between pt-2">
+          {currentGig && (
+            <Button type="button" variant="destructive" onClick={deleteGig} disabled={saving}>
+              Delete
+            </Button>
+          )}
+          <div className="ml-auto">
+            <Button type="submit" disabled={saving}>
+              {saving && (
+                <svg
+                  className="animate-spin h-4 w-4 mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
               )}
-            </div>
+              {saving ? "Saving..." : currentGig ? "Save Changes" : "Add Gig"}
+            </Button>
+          </div>
+        </div>
+      </form>
 
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input type="date" id="date" name="date" value={formData.date} onChange={handleChange} />
-            </div>
+      {/* Close button */}
+      <DialogPrimitive.Close
+        className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
+        aria-label="Close"
+      >
+        <X className="h-5 w-5" />
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+</DialogPrimitive.Root>
 
-            <div>
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} />
-            </div>
 
-            <div>
-              <Label htmlFor="fee">Fee (£)</Label>
-              <Input type="number" id="fee" name="fee" value={formData.fee} onChange={handleChange} />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" value={formData.description} onChange={handleChange} />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="privateEvent"
-                name="privateEvent"
-                checked={formData.privateEvent}
-                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, privateEvent: !!checked }))}
-              />
-              <Label htmlFor="privateEvent">Private Event</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="postersNeeded"
-                name="postersNeeded"
-                checked={formData.postersNeeded}
-                onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))}
-              />
-              <Label htmlFor="postersNeeded">Posters Needed</Label>
-            </div>
-
-            <DialogFooter className="flex justify-between">
-              {currentGig && (
-                <Button type="button" variant="destructive" onClick={deleteGig}>
-                  Delete
-                </Button>
-              )}
-              <Button type="submit">{currentGig ? "Save Changes" : "Add Gig"}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

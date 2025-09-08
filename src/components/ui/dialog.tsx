@@ -38,8 +38,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full max-w-3xl gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 sm:rounded-xl sm:p-10",
-        "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+        // put content ABOVE overlay and force a visible bg/text
+        "fixed z-50 grid w-full max-w-3xl gap-4 rounded-lg border " +
+          "bg-gray-900 text-white p-6 shadow-lg duration-200 sm:rounded-xl sm:p-10 " +
+          "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 " +
+          "pointer-events-auto " +
+          "data-[state=open]:animate-in data-[state=closed]:animate-out " +
+          "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 " +
+          "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
         className
       )}
       {...props}
@@ -51,6 +57,7 @@ const DialogContent = React.forwardRef<
     </DialogPrimitive.Content>
   </DialogPortal>
 ))
+
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
