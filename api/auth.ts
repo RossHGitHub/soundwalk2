@@ -1,9 +1,8 @@
 // api/auth.ts
-import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
-import { requireEnv } from './_envGuard';
+import { requireEnv } from './_envGuard.js';
 
 let client: MongoClient | null = null;
 
@@ -18,7 +17,7 @@ async function getDb() {
   return client.db(dbName);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
   try {
     if (req.method !== 'POST') {
       res.setHeader('Allow', ['POST']);

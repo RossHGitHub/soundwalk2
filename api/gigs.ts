@@ -1,4 +1,4 @@
-import { requireEnv } from './_envGuard';
+import { requireEnv } from './_envGuard.js';
 import { MongoClient, ObjectId } from 'mongodb';
 import { google } from 'googleapis';
 import { DateTime } from 'luxon';
@@ -49,7 +49,7 @@ export default async function handler(req: any, res: any) {
   const col = db.collection("gigs");
   const method = req.method;
   const calendar = getCalendarClient();
-  const calendarId = process.env.GOOGLE_CALENDAR_ID || requireEnv('GOOGLE_CALENDAR_ID');
+const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
 
   // GET gigs
   if (method === "GET") {
