@@ -3,7 +3,6 @@ import { MongoClient, ObjectId } from 'mongodb';
 import { google } from 'googleapis';
 import { DateTime } from 'luxon';
 
-
 let client: MongoClient | null = null;
 
 async function getDb() {
@@ -18,7 +17,6 @@ async function getDb() {
 }
 
 // Google Calendar setup
-
 function getCalendarClient() {
   const raw = process.env.GOOGLE_CREDENTIALS;
   if (!raw) return null;
@@ -39,17 +37,12 @@ function getCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
-// Helper: convert JS Date to Europe/London ISO string with Luxon
-function toLondonISO(date: Date) {
-  return DateTime.fromJSDate(date).setZone("Europe/London").toISO();
-}
-
 export default async function handler(req: any, res: any) {
   const db = await getDb();
   const col = db.collection("gigs");
   const method = req.method;
   const calendar = getCalendarClient();
-const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
+  const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
 
   // GET gigs
   if (method === "GET") {
@@ -62,36 +55,45 @@ const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
     );
   }
 
-  // POST — create gig + calendar event
-  if (method === "POST") {
-    const body = req.body;
-    let gigDate = DateTime.fromISO(body.date, { zone: "Europe/London" });
-    if (body.startTime) {
-      const [hours, minutes] = body.startTime.split(":").map(Number);
-      gigDate = gigDate.set({ hour: hours, minute: minutes });
+  // Helper to build both Luxon (for Calendar) and JS Date (for Mongo) from date + startTime
+  function buildDates(dateISO: string, startTime?: string) {
+    let lx = DateTime.fromISO(dateISO, { zone: "Europe/London" });
+    if (startTime) {
+      const [h, m] = String(startTime).split(":").map(Number);
+      lx = lx.set({ hour: h || 0, minute: m || 0, second: 0, millisecond: 0 });
     }
+    return { luxon: lx, js: lx.toJSDate() };
+  }
+
+  // POST — create gig + calendar event (Calendar Description = Internal Notes)
+  if (method === "POST") {
+    const body = req.body || {};
+    if (!body.date) return res.status(400).json({ error: "Missing date" });
+
+    const { luxon: gigLx, js: gigJs } = buildDates(body.date, body.startTime);
 
     const newGig = {
       venue: body.venue || "",
-      date: gigDate,
+      date: gigJs,                      
       startTime: body.startTime || null,
       description: body.description || "",
       fee: Number(body.fee) || 0,
       privateEvent: !!body.privateEvent,
       postersNeeded: !!body.postersNeeded,
+      internalNotes: body.internalNotes || "",
       calendarEventId: null as string | null,
     };
 
     const r = await col.insertOne(newGig);
 
-    // Create Google Calendar event
+    // Create Google Calendar event with Internal Notes as description
     if (calendar) {
       try {
         const event = {
-          summary: `Gig at ${body.venue}`,
-          description: body.description,
-          start: { dateTime: gigDate.toISO(), timeZone: "Europe/London" },
-          end: { dateTime: gigDate.plus({ hours: 2 }).toISO(), timeZone: "Europe/London" },
+          summary: `Gig at ${newGig.venue}`,
+          description: newGig.internalNotes || "",
+          start: { dateTime: gigLx.toISO(), timeZone: "Europe/London" },
+          end:   { dateTime: gigLx.plus({ hours: 2 }).toISO(), timeZone: "Europe/London" },
           colorId: "5",
           reminders: {
             useDefault: false,
@@ -102,14 +104,13 @@ const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
           },
         };
 
-        const calendarRes = await calendar.events.insert({
-          calendarId,
-          requestBody: event,
-        });
+        const calendarRes = await calendar.events.insert({ calendarId, requestBody: event });
         const eventId = calendarRes.data.id;
         if (eventId) {
           await col.updateOne({ _id: r.insertedId }, { $set: { calendarEventId: eventId } });
           newGig.calendarEventId = eventId;
+        } else {
+          console.error("Calendar insert returned no event id:", calendarRes.data);
         }
       } catch (e) {
         console.error("Error creating calendar event:", e);
@@ -119,68 +120,69 @@ const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
     return res.status(201).json({ ...newGig, _id: r.insertedId.toString() });
   }
 
-  // PUT — update gig + calendar event
-if (method === "PUT") {
-  const body = req.body;
-  const id = body._id;
+  // PUT — update gig + calendar event (Calendar Description = Internal Notes)
+  if (method === "PUT") {
+    const body = req.body || {};
+    const id = body._id;
+    if (!id || typeof id !== "string") return res.status(400).json({ error: "Missing or invalid _id" });
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ObjectId format" });
+    if (!body.date) return res.status(400).json({ error: "Missing date" });
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Missing or invalid _id" });
+    const { luxon: gigLx, js: gigJs } = buildDates(body.date, body.startTime);
+
+    const update = {
+      venue: body.venue || "",
+      date: gigJs,                           // keep as JS Date
+      startTime: body.startTime || null,
+      description: body.description || "",
+      fee: Number(body.fee) || 0,
+      privateEvent: !!body.privateEvent,
+      postersNeeded: !!body.postersNeeded,
+      internalNotes: body.internalNotes || "", // <- ensure saved
+    };
+
+    const _id = new ObjectId(id);
+    const u = await col.updateOne({ _id }, { $set: update });
+    if (u.matchedCount === 0) return res.status(404).json({ error: "Not found" });
+
+    const fresh = await col.findOne({ _id });
+
+    if (calendar && fresh?.calendarEventId) {
+      try {
+        const start = DateTime.fromJSDate(fresh.date).setZone("Europe/London");
+        const end = start.plus({ hours: 2 });
+        await calendar.events.patch({
+          calendarId,
+          eventId: fresh.calendarEventId,
+          requestBody: {
+            summary: `Gig at ${fresh.venue}`,
+            description: fresh.internalNotes ?? "",
+            start: { dateTime: start.toISO(), timeZone: "Europe/London" },
+            end: { dateTime: end.toISO(), timeZone: "Europe/London" },
+          },
+        });
+      } catch (e) {
+        console.error("Error updating calendar event:", e);
+      }
+    }
+
+    return res.status(200).json({ ...fresh, _id: fresh!._id.toString() });
   }
-  if (!ObjectId.isValid(id)) {
-    return res.status(400).json({ error: "Invalid ObjectId format" });
-  }
-
-  // Build the gig date
-  const gigDate = new Date(body.date);
-  if (body.startTime) {
-    const [hours, minutes] = String(body.startTime).split(":").map(Number);
-    gigDate.setHours(hours || 0, minutes || 0, 0, 0);
-  }
-
-  const update = {
-    venue: body.venue || "",
-    date: gigDate,                        // store as JS Date
-    startTime: body.startTime || null,
-    description: body.description || "",
-    fee: Number(body.fee) || 0,
-    privateEvent: !!body.privateEvent,
-    postersNeeded: !!body.postersNeeded,
-  };
-
-  // Use updateOne + find, so we’re not dependent on `value`
-  const _id = new ObjectId(id);
-  const u = await col.updateOne({ _id }, { $set: update });
-
-  if (u.matchedCount === 0) {
-    return res.status(404).json({ error: "Not found" });
-  }
-
-  // fetch updated doc to send back
-  const fresh = await col.findOne({ _id });
-  // (optional) Google Calendar sync using `gigDate` as you already do...
-
-  return res.status(200).json({ ...fresh, _id: fresh!._id.toString() });
-}
-
-
 
   // DELETE — remove gig + calendar event
   if (method === "DELETE") {
     const { id } = req.query;
     if (!id || typeof id !== "string") return res.status(400).json({ error: "Missing id" });
 
-    const gig = await col.findOne({ _id: new ObjectId(id) });
+    const _id = new ObjectId(id);
+    const gig = await col.findOne({ _id });
     if (!gig) return res.status(404).json({ error: "Not found" });
 
-    await col.deleteOne({ _id: new ObjectId(id) });
+    await col.deleteOne({ _id });
 
     if (calendar && gig.calendarEventId) {
       try {
-        await calendar.events.delete({
-          calendarId,
-          eventId: gig.calendarEventId,
-        });
+        await calendar.events.delete({ calendarId, eventId: gig.calendarEventId });
       } catch (e) {
         console.error("Error deleting calendar event:", e);
       }
