@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import dynamic from "next/dynamic";
+
 import { Button } from "../components/ui/button";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -16,13 +18,18 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
+
+// IMPORTANT: dynamic import because react-big-calendar references window
+const GigCalendar = dynamic(() => import("../components/gigCalendar"), { ssr: false });
 
 type Gig = {
   _id?: string;
   venue: string;
-  date: string;
+  date: string; // ISO yyyy-mm-dd in state
   startTime?: string;
   description?: string;
   fee?: number | string;
@@ -62,6 +69,7 @@ export default function Admin() {
       data.map((gig: any) => ({
         ...gig,
         _id: gig._id?.toString(),
+        // normalize to yyyy-mm-dd for inputs & calendar mapping
         date: new Date(gig.date).toISOString().slice(0, 10),
       }))
     );
@@ -104,10 +112,7 @@ export default function Admin() {
     setFormData((prev) => {
       const updatedData = {
         ...prev,
-        [name]:
-          type === "checkbox"
-            ? (e.target as HTMLInputElement).checked
-            : value,
+        [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
       };
       if (name === "venue") {
         if (value.length > 0) {
@@ -210,13 +215,24 @@ export default function Admin() {
   }
 
   const filteredGigs = showFutureOnly
-    ? gigs.filter((g) => new Date(g.date) >= new Date())
+    ? gigs.filter((g) => new Date(g.date) >= new Date(new Date().toISOString().slice(0,10)))
     : gigs;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
-      <div className="flex justify-between items-center mb-8">
+
+      <Tabs defaultValue="list" className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <TabsList>
+            <TabsTrigger value="list">Gig listings</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          </TabsList>
+          <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
+            Add Gig
+          </Button>
+        </div>
+
         <div className="flex items-center space-x-2">
           <Label htmlFor="futureToggle">Show future gigs only</Label>
           <Checkbox
@@ -225,74 +241,74 @@ export default function Admin() {
             onCheckedChange={(checked) => setShowFutureOnly(!!checked)}
           />
         </div>
-        <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
-          Add Gig
-        </Button>
-      </div>
 
-      {loading ? (
-        <p>Loading gigs...</p>
-      ) : filteredGigs.length === 0 ? (
-        <p>No gigs booked yet.</p>
-      ) : (
-        Object.entries(groupGigsByDate(filteredGigs)).map(([year, months]) => (
-          <section key={year} className="mb-20">
-            <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">{year}</h2>
-            {Object.entries(months).map(([month, monthGigs]) => (
-              <div key={month} className="mb-12">
-                <h3 className="text-2xl font-semibold mb-6">{month}</h3>
-                <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {monthGigs.map((gig) => (
-                    <div
-                      key={gig._id}
-                      onClick={() => openModal(gig)}
-                      className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
-                        <span className="text-sm text-muted-foreground">{formatDate(gig.date)}</span>
-                      </div>
-                      {gig.postersNeeded && (
-                        <div className="absolute top-[2px] right-[2px] bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                          Posters Needed!
+        <TabsContent value="list" className="mt-4">
+          {loading ? (
+            <p>Loading gigs...</p>
+          ) : filteredGigs.length === 0 ? (
+            <p>No gigs booked yet.</p>
+          ) : (
+            Object.entries(groupGigsByDate(filteredGigs)).map(([year, months]) => (
+              <section key={year} className="mb-20">
+                <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">{year}</h2>
+                {Object.entries(months).map(([month, monthGigs]) => (
+                  <div key={month} className="mb-12">
+                    <h3 className="text-2xl font-semibold mb-6">{month}</h3>
+                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      {monthGigs.map((gig) => (
+                        <div
+                          key={gig._id}
+                          onClick={() => openModal(gig)}
+                          className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
+                            <span className="text-sm text-muted-foreground">{formatDate(gig.date)}</span>
+                          </div>
+                          {gig.postersNeeded && (
+                            <div className="absolute top-[2px] right-[2px] bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                              Posters Needed!
+                            </div>
+                          )}
+                          {gig.startTime && (
+                            <p className="text-sm text-emerald-300 mb-2">Start: {formatTime(gig.startTime)}</p>
+                          )}
+                          {gig.description && <p className="text-muted-foreground mb-4">{gig.description}</p>}
+                          <div className="flex justify-between items-end">
+                            <p className="text-xl text-emerald-400">£{gig.fee}</p>
+                          </div>
                         </div>
-                      )}
-                      {gig.startTime && (
-                        <p className="text-sm text-emerald-300 mb-2">Start: {formatTime(gig.startTime)}</p>
-                      )}
-                      {gig.description && <p className="text-muted-foreground mb-4">{gig.description}</p>}
-                      <div className="flex justify-between items-end">
-                        <p className="text-xl text-emerald-400">£{gig.fee}</p>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-        ))
-      )}
+                  </div>
+                ))}
+              </section>
+            ))
+          )}
+        </TabsContent>
 
+        <TabsContent value="calendar" className="mt-4">
+          {loading ? (
+            <p>Loading calendar…</p>
+          ) : (
+            <GigCalendar gigs={filteredGigs} onEventClick={(gig) => openModal(gig)} />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Modal */}
       <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
         <DialogPrimitive.Portal>
-          {/* Overlay BELOW content */}
           <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-[1px]" />
-          {/* Content ABOVE overlay */}
           <DialogPrimitive.Content
             className="fixed z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
                        w-full max-w-[425px] bg-gray-900 text-white rounded-lg border border-white/10
                        shadow-xl p-6 sm:p-8 focus:outline-none"
           >
-            {/* Saving overlay */}
             {saving && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] grid place-items-center rounded-lg">
                 <div className="flex items-center gap-3">
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                   </svg>
@@ -301,7 +317,6 @@ export default function Admin() {
               </div>
             )}
 
-            {/* Header */}
             <div className="mb-4">
               <h2 className="text-xl font-semibold">{currentGig ? "Edit Gig" : "Add Gig"}</h2>
               <p className="text-sm text-white/70">
@@ -309,9 +324,7 @@ export default function Admin() {
               </p>
             </div>
 
-            {/* FORM */}
             <form onSubmit={saveGig} className="space-y-4" aria-busy={saving}>
-              {/* Venue */}
               <div className="relative">
                 <Label htmlFor="venue">Venue</Label>
                 <Input id="venue" name="venue" value={formData.venue} onChange={handleChange} autoComplete="off" />
@@ -330,31 +343,26 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* Date */}
               <div>
                 <Label htmlFor="date">Date</Label>
                 <Input type="date" id="date" name="date" value={formData.date} onChange={handleChange} />
               </div>
 
-              {/* Start Time */}
               <div>
                 <Label htmlFor="startTime">Start Time</Label>
                 <Input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} />
               </div>
 
-              {/* Fee */}
               <div>
                 <Label htmlFor="fee">Fee (£)</Label>
                 <Input type="number" id="fee" name="fee" value={formData.fee} onChange={handleChange} />
               </div>
 
-              {/* Description (for your app only; not pushed to Calendar) */}
               <div>
                 <Label htmlFor="description">Description</Label>
                 <Textarea id="description" name="description" value={formData.description} onChange={handleChange} />
               </div>
 
-              {/* Internal Notes -> pushed to Calendar Description */}
               <div>
                 <Label htmlFor="internalNotes">Internal Notes</Label>
                 <Input
@@ -365,7 +373,6 @@ export default function Admin() {
                 />
               </div>
 
-              {/* Toggles */}
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="privateEvent"
@@ -385,7 +392,6 @@ export default function Admin() {
                 <Label htmlFor="postersNeeded">Posters Needed</Label>
               </div>
 
-              {/* Footer */}
               <div className="flex justify-between pt-2">
                 {currentGig && (
                   <Button type="button" variant="destructive" onClick={deleteGig} disabled={saving}>
@@ -395,12 +401,7 @@ export default function Admin() {
                 <div className="ml-auto">
                   <Button type="submit" disabled={saving}>
                     {saving && (
-                      <svg
-                        className="animate-spin h-4 w-4 mr-2"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
+                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                       </svg>
@@ -411,7 +412,6 @@ export default function Admin() {
               </div>
             </form>
 
-            {/* Close button */}
             <DialogPrimitive.Close
               className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
               aria-label="Close"
