@@ -6,14 +6,6 @@ import dynamic from "next/dynamic";
 import { Button } from "../components/ui/button";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
@@ -57,8 +49,23 @@ export default function Admin() {
   const [showFutureOnly, setShowFutureOnly] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Always include Google Calendar events
+  const [gcalEvents, setGcalEvents] = useState<Array<any>>([]);
+
   useEffect(() => {
     fetchGigs();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/google-events");
+        const data = await r.json();
+        setGcalEvents(data);
+      } catch {
+        setGcalEvents([]);
+      }
+    })();
   }, []);
 
   async function fetchGigs() {
@@ -205,7 +212,12 @@ export default function Admin() {
 
   function formatDate(dateString: string) {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    return date.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   }
 
   function formatTime(timeString?: string) {
@@ -215,7 +227,7 @@ export default function Admin() {
   }
 
   const filteredGigs = showFutureOnly
-    ? gigs.filter((g) => new Date(g.date) >= new Date(new Date().toISOString().slice(0,10)))
+    ? gigs.filter((g) => new Date(g.date) >= new Date(new Date().toISOString().slice(0, 10)))
     : gigs;
 
   return (
@@ -250,7 +262,9 @@ export default function Admin() {
           ) : (
             Object.entries(groupGigsByDate(filteredGigs)).map(([year, months]) => (
               <section key={year} className="mb-20">
-                <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">{year}</h2>
+                <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
+                  {year}
+                </h2>
                 {Object.entries(months).map(([month, monthGigs]) => (
                   <div key={month} className="mb-12">
                     <h3 className="text-2xl font-semibold mb-6">{month}</h3>
@@ -263,7 +277,9 @@ export default function Admin() {
                         >
                           <div className="flex justify-between items-start mb-2">
                             <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
-                            <span className="text-sm text-muted-foreground">{formatDate(gig.date)}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatDate(gig.date)}
+                            </span>
                           </div>
                           {gig.postersNeeded && (
                             <div className="absolute top-[2px] right-[2px] bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
@@ -271,9 +287,13 @@ export default function Admin() {
                             </div>
                           )}
                           {gig.startTime && (
-                            <p className="text-sm text-emerald-300 mb-2">Start: {formatTime(gig.startTime)}</p>
+                            <p className="text-sm text-emerald-300 mb-2">
+                              Start: {formatTime(gig.startTime)}
+                            </p>
                           )}
-                          {gig.description && <p className="text-muted-foreground mb-4">{gig.description}</p>}
+                          {gig.description && (
+                            <p className="text-muted-foreground mb-4">{gig.description}</p>
+                          )}
                           <div className="flex justify-between items-end">
                             <p className="text-xl text-emerald-400">£{gig.fee}</p>
                           </div>
@@ -291,7 +311,11 @@ export default function Admin() {
           {loading ? (
             <p>Loading calendar…</p>
           ) : (
-            <GigCalendar gigs={filteredGigs} onEventClick={(gig) => openModal(gig)} />
+            <GigCalendar
+              gigs={filteredGigs}
+              extraEvents={gcalEvents}
+              onEventClick={(gig: Gig) => openModal(gig)}
+            />
           )}
         </TabsContent>
       </Tabs>
@@ -308,9 +332,25 @@ export default function Admin() {
             {saving && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] grid place-items-center rounded-lg">
                 <div className="flex items-center gap-3">
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  <svg
+                    className="animate-spin h-5 w-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
                   </svg>
                   <span>Saving…</span>
                 </div>
@@ -318,7 +358,9 @@ export default function Admin() {
             )}
 
             <div className="mb-4">
-              <h2 className="text-xl font-semibold">{currentGig ? "Edit Gig" : "Add Gig"}</h2>
+              <h2 className="text-xl font-semibold">
+                {currentGig ? "Edit Gig" : "Add Gig"}
+              </h2>
               <p className="text-sm text-white/70">
                 {currentGig ? "Update your gig details below." : "Enter details for your new gig."}
               </p>
@@ -327,7 +369,13 @@ export default function Admin() {
             <form onSubmit={saveGig} className="space-y-4" aria-busy={saving}>
               <div className="relative">
                 <Label htmlFor="venue">Venue</Label>
-                <Input id="venue" name="venue" value={formData.venue} onChange={handleChange} autoComplete="off" />
+                <Input
+                  id="venue"
+                  name="venue"
+                  value={formData.venue}
+                  onChange={handleChange}
+                  autoComplete="off"
+                />
                 {venueSuggestions.length > 0 && (
                   <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-[110] rounded-md overflow-hidden">
                     {venueSuggestions.map((venue) => (
@@ -345,22 +393,45 @@ export default function Admin() {
 
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Input type="date" id="date" name="date" value={formData.date} onChange={handleChange} />
+                <Input
+                  type="date"
+                  id="date"
+                  name="date"
+                  value={formData.date}
+                  onChange={handleChange}
+                />
               </div>
 
               <div>
                 <Label htmlFor="startTime">Start Time</Label>
-                <Input type="time" id="startTime" name="startTime" value={formData.startTime} onChange={handleChange} />
+                <Input
+                  type="time"
+                  id="startTime"
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                />
               </div>
 
               <div>
                 <Label htmlFor="fee">Fee (£)</Label>
-                <Input type="number" id="fee" name="fee" value={formData.fee} onChange={handleChange} />
+                <Input
+                  type="number"
+                  id="fee"
+                  name="fee"
+                  value={formData.fee}
+                  onChange={handleChange}
+                />
               </div>
 
               <div>
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" value={formData.description} onChange={handleChange} />
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                />
               </div>
 
               <div>
@@ -378,7 +449,9 @@ export default function Admin() {
                   id="privateEvent"
                   name="privateEvent"
                   checked={!!formData.privateEvent}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, privateEvent: !!checked }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, privateEvent: !!checked }))
+                  }
                 />
                 <Label htmlFor="privateEvent">Private Event</Label>
               </div>
@@ -387,7 +460,9 @@ export default function Admin() {
                   id="postersNeeded"
                   name="postersNeeded"
                   checked={!!formData.postersNeeded}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))
+                  }
                 />
                 <Label htmlFor="postersNeeded">Posters Needed</Label>
               </div>
@@ -401,9 +476,25 @@ export default function Admin() {
                 <div className="ml-auto">
                   <Button type="submit" disabled={saving}>
                     {saving && (
-                      <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                      <svg
+                        className="animate-spin h-4 w-4 mr-2"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
                       </svg>
                     )}
                     {saving ? "Saving..." : currentGig ? "Save Changes" : "Add Gig"}
