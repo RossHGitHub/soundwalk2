@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import dynamic from "next/dynamic";
 
 import { Button } from "../components/ui/button";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -11,12 +10,13 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
+import { DateTime } from "luxon";
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
 
-// IMPORTANT: dynamic import because react-big-calendar references window
-const GigCalendar = dynamic(() => import("../components/gigCalendar"), { ssr: false });
+import GigCalendar from "../components/gigCalendar";
+
 
 type Gig = {
   _id?: string;
@@ -226,6 +226,22 @@ export default function Admin() {
     return `${hours}:${minutes}`;
   }
 
+  function openCreateAt(dateISO: string, startTimeHHmm?: string) {
+    setCurrentGig(null);
+    setFormData({
+      venue: "",
+      date: dateISO,                    // yyyy-mm-dd (Europe/London)
+      startTime: startTimeHHmm || "",   // e.g. from Week slot
+      description: "",
+      fee: "",
+      privateEvent: false,
+      postersNeeded: false,
+      internalNotes: "",
+    });
+    setSaving(false);
+    setIsOpen(true);
+  }
+
   const filteredGigs = showFutureOnly
     ? gigs.filter((g) => new Date(g.date) >= new Date(new Date().toISOString().slice(0, 10)))
     : gigs;
@@ -307,7 +323,7 @@ export default function Admin() {
           )}
         </TabsContent>
 
-        <TabsContent value="calendar" className="mt-4">
+        <TabsContent value="calendar" className="mt-4 mb-12">
           {loading ? (
             <p>Loading calendar…</p>
           ) : (
@@ -315,6 +331,7 @@ export default function Admin() {
               gigs={filteredGigs}
               extraEvents={gcalEvents}
               onEventClick={(gig: Gig) => openModal(gig)}
+              onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
             />
           )}
         </TabsContent>
