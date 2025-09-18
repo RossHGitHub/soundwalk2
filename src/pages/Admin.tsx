@@ -10,13 +10,12 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
-import { DateTime } from "luxon";
+// import { DateTime } from "luxon"; // REMOVED (unused)
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
 
 import GigCalendar from "../components/gigCalendar";
-
 
 type Gig = {
   _id?: string;
@@ -46,11 +45,14 @@ export default function Admin() {
     internalNotes: "",
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
-  const [showFutureOnly, setShowFutureOnly] = useState(true);
+  // const [showFutureOnly, setShowFutureOnly] = useState(true); // REMOVED
   const [saving, setSaving] = useState(false);
 
   // Always include Google Calendar events
   const [gcalEvents, setGcalEvents] = useState<Array<any>>([]);
+
+  // NEW: lightweight search state (debounce not necessary unless list is huge)
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetchGigs();
@@ -242,9 +244,28 @@ export default function Admin() {
     setIsOpen(true);
   }
 
-  const filteredGigs = showFutureOnly
-    ? gigs.filter((g) => new Date(g.date) >= new Date(new Date().toISOString().slice(0, 10)))
-    : gigs;
+  // NEW: helpers for default future list vs. search-across-all
+  const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
+  const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
+
+  function matchesSearch(g: Gig, q: string) {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    const haystack = [
+      g.venue,
+      g.description ?? "",
+      g.internalNotes ?? "",
+      g.date,           // yyyy-mm-dd
+      g.startTime ?? "",
+      String(g.fee ?? ""),
+    ]
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(needle);
+  }
+
+  // NEW: displayed list
+  const displayedGigs = (search ? gigs : futureOnly).filter((g) => matchesSearch(g, search));
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -261,22 +282,36 @@ export default function Admin() {
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="futureToggle">Show future gigs only</Label>
-          <Checkbox
-            id="futureToggle"
-            checked={showFutureOnly}
-            onCheckedChange={(checked) => setShowFutureOnly(!!checked)}
-          />
-        </div>
-
         <TabsContent value="list" className="mt-4">
+                <div className="flex items-center gap-3 mb-6">
+          <Label htmlFor="gigSearch" className="whitespace-nowrap">
+            Search gigs:
+          </Label>
+          <div className="relative flex-1">
+            <Input
+              id="gigSearch"
+              placeholder="Search by Venue, Notes, Description, Date etc."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
           {loading ? (
             <p>Loading gigs...</p>
-          ) : filteredGigs.length === 0 ? (
-            <p>No gigs booked yet.</p>
+          ) : displayedGigs.length === 0 ? (
+            <p>No gigs found.</p>
           ) : (
-            Object.entries(groupGigsByDate(filteredGigs)).map(([year, months]) => (
+            Object.entries(groupGigsByDate(displayedGigs)).map(([year, months]) => (
               <section key={year} className="mb-20">
                 <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
                   {year}
@@ -328,7 +363,7 @@ export default function Admin() {
             <p>Loading calendar…</p>
           ) : (
             <GigCalendar
-              gigs={filteredGigs}
+              gigs={displayedGigs}               // NEW: keep list/calendar in sync with search
               extraEvents={gcalEvents}
               onEventClick={(gig: Gig) => openModal(gig)}
               onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
