@@ -2,7 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GigList } from "../components/GigList";
-import soundwalkThreeStories from "../assets/img/soundwalkThreeStories.jpeg";
+import soundwalkSheepfolds from "../assets/img/soundwalkSheepfolds.jpeg";
 import Hero from "../components/Hero";
 type Gig = {
   _id?: string;
@@ -63,7 +63,7 @@ export default function Gigs() {
   return (
       <main className="min-h-screen bg-background text-foreground p-8 max-w-7xl mx-auto">
       <Hero
-        image={soundwalkThreeStories}
+        image={soundwalkSheepfolds}
         title="Upcoming Shows"
       />
       {loading ? (
