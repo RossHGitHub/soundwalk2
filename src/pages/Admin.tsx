@@ -10,7 +10,6 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
-// import { DateTime } from "luxon"; // REMOVED (unused)
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
@@ -29,6 +28,14 @@ type Gig = {
   internalNotes?: string;
 };
 
+type SyncResult = {
+  totalUpcoming: number;
+  createdCount: number;
+  recreatedCount: number;
+  skippedCount: number;
+  errors: { gigId: string; message: string }[];
+};
+
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,14 +52,18 @@ export default function Admin() {
     internalNotes: "",
   });
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
-  // const [showFutureOnly, setShowFutureOnly] = useState(true); // REMOVED
   const [saving, setSaving] = useState(false);
 
   // Always include Google Calendar events
   const [gcalEvents, setGcalEvents] = useState<Array<any>>([]);
 
-  // NEW: lightweight search state (debounce not necessary unless list is huge)
+  // Search state
   const [search, setSearch] = useState("");
+
+  // Sanity check / sync state
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGigs();
@@ -232,8 +243,8 @@ export default function Admin() {
     setCurrentGig(null);
     setFormData({
       venue: "",
-      date: dateISO,                    // yyyy-mm-dd (Europe/London)
-      startTime: startTimeHHmm || "",   // e.g. from Week slot
+      date: dateISO, // yyyy-mm-dd (Europe/London)
+      startTime: startTimeHHmm || "", // e.g. from Week slot
       description: "",
       fee: "",
       privateEvent: false,
@@ -244,7 +255,6 @@ export default function Admin() {
     setIsOpen(true);
   }
 
-  // NEW: helpers for default future list vs. search-across-all
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
   const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
 
@@ -255,7 +265,7 @@ export default function Admin() {
       g.venue,
       g.description ?? "",
       g.internalNotes ?? "",
-      g.date,           // yyyy-mm-dd
+      g.date, // yyyy-mm-dd
       g.startTime ?? "",
       String(g.fee ?? ""),
     ]
@@ -264,48 +274,115 @@ export default function Admin() {
     return haystack.includes(needle);
   }
 
-  // NEW: displayed list
   const displayedGigs = (search ? gigs : futureOnly).filter((g) => matchesSearch(g, search));
+
+  // NEW: run the calendar sanity check / sync
+  async function runCalendarSync() {
+    setSyncing(true);
+    setSyncError(null);
+    setSyncResult(null);
+
+    try {
+      const res = await fetch("/api/gigs-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Sync failed (${res.status}): ${text || res.statusText}`);
+      }
+
+      const data = (await res.json()) as SyncResult;
+      setSyncResult(data);
+    } catch (e: any) {
+      setSyncError(e?.message || "Unknown error running sync");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
 
       <Tabs defaultValue="list" className="space-y-6">
+        {/* Top bar: tabs + actions */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <TabsList>
             <TabsTrigger value="list">Gig listings</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
           </TabsList>
-          <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
-            Add Gig
-          </Button>
-        </div>
 
-        <TabsContent value="list" className="mt-4">
-                <div className="flex items-center gap-3 mb-6">
-          <Label htmlFor="gigSearch" className="whitespace-nowrap">
-            Search gigs:
-          </Label>
-          <div className="relative flex-1">
-            <Input
-              id="gigSearch"
-              placeholder="Search by Venue, Notes, Description, Date etc."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground hover:text-foreground"
-                aria-label="Clear search"
-              >
-                Clear
-              </button>
-            )}
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <Button
+              variant="outline"
+              onClick={runCalendarSync}
+              disabled={syncing}
+              className="whitespace-nowrap"
+            >
+              {syncing ? "Running calendar sync…" : "Calendar sanity check"}
+            </Button>
+            <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
+              Add Gig
+            </Button>
           </div>
         </div>
+
+        {/* Sync result / errors (shown above views) */}
+        {(syncError || syncResult) && (
+          <div className="text-sm space-y-1">
+            {syncError && <p className="text-red-400">Sync error: {syncError}</p>}
+            {syncResult && (
+              <div className="text-muted-foreground">
+                <p>
+                  Calendar sync — Upcoming: {syncResult.totalUpcoming} • Created:{" "}
+                  {syncResult.createdCount} • Recreated: {syncResult.recreatedCount} • Already OK:{" "}
+                  {syncResult.skippedCount}
+                </p>
+                {syncResult.errors.length > 0 && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer">
+                      View sync issues ({syncResult.errors.length})
+                    </summary>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5">
+                      {syncResult.errors.map((e, idx) => (
+                        <li key={idx}>
+                          Gig <span className="font-mono text-xs">{e.gigId}</span>: {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <TabsContent value="list" className="mt-4">
+          <div className="flex items-center gap-3 mb-6">
+            <Label htmlFor="gigSearch" className="whitespace-nowrap">
+              Search gigs:
+            </Label>
+            <div className="relative flex-1">
+              <Input
+                id="gigSearch"
+                placeholder="Search by Venue, Notes, Description, Date etc."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
           {loading ? (
             <p>Loading gigs...</p>
           ) : displayedGigs.length === 0 ? (
@@ -327,7 +404,9 @@ export default function Admin() {
                           className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <strong className="text-emerald-500 text-xl">{gig.venue}</strong>
+                            <strong className="text-emerald-500 text-xl">
+                              {gig.venue}
+                            </strong>
                             <span className="text-sm text-muted-foreground">
                               {formatDate(gig.date)}
                             </span>
@@ -343,7 +422,9 @@ export default function Admin() {
                             </p>
                           )}
                           {gig.description && (
-                            <p className="text-muted-foreground mb-4">{gig.description}</p>
+                            <p className="text-muted-foreground mb-4">
+                              {gig.internalNotes}
+                            </p>
                           )}
                           <div className="flex justify-between items-end">
                             <p className="text-xl text-emerald-400">£{gig.fee}</p>
@@ -363,7 +444,7 @@ export default function Admin() {
             <p>Loading calendar…</p>
           ) : (
             <GigCalendar
-              gigs={displayedGigs}               // NEW: keep list/calendar in sync with search
+              gigs={displayedGigs} // keep list/calendar in sync with search
               extraEvents={gcalEvents}
               onEventClick={(gig: Gig) => openModal(gig)}
               onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
@@ -414,7 +495,9 @@ export default function Admin() {
                 {currentGig ? "Edit Gig" : "Add Gig"}
               </h2>
               <p className="text-sm text-white/70">
-                {currentGig ? "Update your gig details below." : "Enter details for your new gig."}
+                {currentGig
+                  ? "Update your gig details below."
+                  : "Enter details for your new gig."}
               </p>
             </div>
 
@@ -521,7 +604,12 @@ export default function Admin() {
 
               <div className="flex justify-between pt-2">
                 {currentGig && (
-                  <Button type="button" variant="destructive" onClick={deleteGig} disabled={saving}>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={deleteGig}
+                    disabled={saving}
+                  >
                     Delete
                   </Button>
                 )}

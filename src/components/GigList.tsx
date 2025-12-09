@@ -51,7 +51,8 @@ export function GigList({ data }: GigListProps) {
                   >
                     <div className="text-emerald-500 text-xl">{gig.venue}</div>
                     <div className="text-muted-foreground">{formatDate(gig.date)}</div>
-                    <div className="text-muted-foreground">{gig.startTime}</div>
+                    <div className="text-muted-foreground">{gig.description}</div>
+                    <div className="text-muted-foreground">Start Time: {gig.startTime}</div>
                   </Card>
                 ))}
               </div>

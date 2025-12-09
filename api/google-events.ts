@@ -25,7 +25,7 @@ export default async function handler(req: any, res: any) {
   if (!calendar) return res.status(200).json([]);
 
   const calendarId =
-    process.env.GOOGLE_CALENDAR_ID ?? "soundwalkband@gmail.com";
+    process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
   const { timeMin, timeMax } = req.query;
 
   const now = DateTime.now().setZone("Europe/London");
