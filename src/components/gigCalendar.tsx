@@ -116,16 +116,18 @@ export default function GigCalendar({
 
   // Dynamic heights so it doesn’t clip the footer
   const monthRows = weeksInMonth(date);
-  const MONTH_ROW_H = isMobile ? 64 : 74;
-  const MONTH_HEADER_H = isMobile ? 32 : 38;
+  const MONTH_ROW_H = isMobile ? 74 : 90;
+  const MONTH_HEADER_H = isMobile ? 34 : 46;
   const MONTH_CHROME = 14;
   const monthHeight = MONTH_HEADER_H + monthRows * MONTH_ROW_H + MONTH_CHROME;
-  const weekHeight = isMobile ? 500 : 520;
-  const agendaHeight = isMobile ? 540 : 420;
+  const weekHeight = isMobile ? 680 : 560;
+  const agendaHeight = isMobile ? 640 : 460;
   const calendarHeight =
     safeView === Views.MONTH ? monthHeight :
     safeView === Views.WEEK  ? weekHeight   :
                                agendaHeight;
+  const navButtonSize = isMobile ? "default" : "sm";
+  const viewButtonSize = isMobile ? "default" : "sm";
 
   // ---- DB gigs -> events
   const gigEvents: RBCEvent[] = useMemo(() => {
@@ -192,11 +194,11 @@ export default function GigCalendar({
 
   const eventPropGetter = useCallback((event: RBCEvent) => {
     const gig = event.resource as Gig;
-    let bg = "#10B981";
-    if (gig?._externalGoogleId) bg = "#64748B";
-    if (gig?.privateEvent) bg = "#6366F1";
-    if (gig?.postersNeeded) bg = "#EF4444";
-    return { style: { backgroundColor: bg, border: "none", color: "white" } };
+    let bg = "#0F9F7A";
+    if (gig?._externalGoogleId) bg = "#6B7280";
+    if (gig?.privateEvent) bg = "#5B63C9";
+    if (gig?.postersNeeded) bg = "#DC5F5F";
+    return { style: { backgroundColor: bg, border: "none", color: "rgba(255,255,255,0.92)" } };
   }, []);
 
   const handleSelectSlot = useCallback(
@@ -210,20 +212,22 @@ export default function GigCalendar({
   );
 
   return (
-    <div className="rounded-xl border border-white/10 bg-gray-900 p-3 overflow-hidden">
+    <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900 via-gray-900 to-gray-950 p-3 sm:p-4 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.35)]">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToday}>Today</Button>
-          <Button variant="outline" size="sm" onClick={goPrev}>Back</Button>
-          <Button variant="outline" size="sm" onClick={goNext}>Next</Button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+        <div className="flex flex-wrap items-center gap-2 order-2 sm:order-none">
+          <Button variant="outline" size={navButtonSize} onClick={goToday}>Today</Button>
+          <Button variant="outline" size={navButtonSize} onClick={goPrev}>Back</Button>
+          <Button variant="outline" size={navButtonSize} onClick={goNext}>Next</Button>
         </div>
-        <div className="text-white/90 font-medium">{headerLabel}</div>
-        <div className="flex items-center gap-2">
+        <div className="text-white/90 font-semibold tracking-wide text-center sm:text-left order-1 sm:order-none">
+          {headerLabel}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end order-3 sm:order-none">
           {!isMobile && (
             <Button
               variant={safeView === Views.MONTH ? "default" : "outline"}
-              size="sm"
+              size={viewButtonSize}
               onClick={() => setView(Views.MONTH)}
             >
               Month
@@ -231,14 +235,14 @@ export default function GigCalendar({
           )}
           <Button
             variant={safeView === Views.WEEK ? "default" : "outline"}
-            size="sm"
+            size={viewButtonSize}
             onClick={() => setView(Views.WEEK)}
           >
             Week
           </Button>
           <Button
             variant={safeView === Views.AGENDA ? "default" : "outline"}
-            size="sm"
+            size={viewButtonSize}
             onClick={() => setView(Views.AGENDA)}
           >
             {isMobile ? "List" : "Agenda"}
@@ -251,6 +255,7 @@ export default function GigCalendar({
 
         .rbc-month-view, .rbc-time-view, .rbc-agenda-view { background: transparent; }
         .rbc-header, .rbc-time-header { color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.06); }
+        .rbc-date-cell { padding: 6px 8px; font-weight: 600; color: rgba(255,255,255,0.75); }
         .rbc-today { background-color: rgba(16,185,129,0.10); }
         .rbc-off-range-bg { background: rgba(255,255,255,0.02); }
 
@@ -260,6 +265,14 @@ export default function GigCalendar({
         .rbc-time-slot { border-top: 0 !important; }
         .rbc-timeslot-group { border-top: 1px solid rgba(255,255,255,0.07) !important; }
         .rbc-time-content, .rbc-time-gutter, .rbc-time-header-gutter { border-color: rgba(255,255,255,0.06); }
+        .rbc-event { border-radius: 10px; padding: 4px 8px; box-shadow: 0 8px 18px rgba(0,0,0,0.18); }
+        .rbc-event-content { font-weight: 600; letter-spacing: 0.01em; font-size: 12.5px; color: rgba(255,255,255,0.9); }
+        .rbc-show-more { color: rgba(255,255,255,0.8); font-weight: 600; }
+        .rbc-agenda-view table.rbc-agenda-table { border-spacing: 0 8px; }
+        .rbc-agenda-view table.rbc-agenda-table tbody tr { background: rgba(255,255,255,0.03); border-radius: 10px; }
+        .rbc-agenda-view table.rbc-agenda-table tbody tr td { padding: 10px 12px; }
+        .rbc-agenda-date-cell, .rbc-agenda-time-cell { color: rgba(255,255,255,0.7); font-weight: 600; }
+        .rbc-agenda-event-cell { font-weight: 600; }
 
         @media (min-width: 641px) {
           .rbc-month-view .rbc-day-bg:hover {
@@ -273,13 +286,13 @@ export default function GigCalendar({
         }
 
         @media (max-width: 640px) {
-          .rbc-header { font-size: 12px; padding: 6px 0 }
-          .rbc-date-cell { font-size: 12px; padding-right: 4px }
-          .rbc-event { padding: 2px 6px; font-size: 12px; border-radius: 6px }
+          .rbc-header { font-size: 12px; padding: 8px 0 }
+          .rbc-date-cell { font-size: 12px; padding-right: 6px }
+          .rbc-event { padding: 4px 8px; font-size: 11.5px; border-radius: 8px }
           .rbc-event-label { display: none }
-          .rbc-agenda-view table.rbc-agenda-table { font-size: 13px }
+          .rbc-agenda-view table.rbc-agenda-table { font-size: 14px }
           .rbc-agenda-date-cell, .rbc-agenda-time-cell { white-space: nowrap }
-          .rbc-time-gutter { width: 38px !important }
+          .rbc-time-gutter { width: 48px !important }
         }
       `}</style>
 

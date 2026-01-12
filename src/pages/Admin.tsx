@@ -2,39 +2,29 @@
 import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 
-import { Button } from "../components/ui/button";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Checkbox } from "../components/ui/checkbox";
-import { Label } from "../components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
-
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
 
-import GigCalendar from "../components/gigCalendar";
-
-type Gig = {
-  _id?: string;
-  venue: string;
-  date: string; // ISO yyyy-mm-dd in state
-  startTime?: string;
-  description?: string;
-  fee?: number | string;
-  privateEvent?: boolean;
-  postersNeeded?: boolean;
-  internalNotes?: string;
-};
-
-type SyncResult = {
-  totalUpcoming: number;
-  createdCount: number;
-  recreatedCount: number;
-  skippedCount: number;
-  errors: { gigId: string; message: string }[];
-};
+import type { AdminSection, Gig, SyncResult } from "./admin/types";
+import { matchesSearch } from "./admin/gigs";
+import {
+  buildRevenueSummary,
+  type RevenueGranularity,
+} from "./admin/revenue";
+import {
+  fetchGigs as fetchGigsFromApi,
+  fetchGoogleEvents,
+  saveGig,
+  deleteGig,
+  runCalendarSync as runCalendarSyncApi,
+} from "./admin/services/gigs";
+import AdminMenuBar from "./admin/components/AdminMenuBar";
+import AdminHeader from "./admin/components/AdminHeader";
+import GigsListSection from "./admin/components/GigsListSection";
+import GigsCalendarSection from "./admin/components/GigsCalendarSection";
+import RevenueRundownSection from "./admin/components/RevenueRundownSection";
+import ToolsSection from "./admin/components/ToolsSection";
+import GigModal from "./admin/components/GigModal";
 
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -59,6 +49,13 @@ export default function Admin() {
 
   // Search state
   const [search, setSearch] = useState("");
+  const [activeSection, setActiveSection] =
+    useState<AdminSection>("gigs-list");
+  const [revenueGranularity, setRevenueGranularity] =
+    useState<RevenueGranularity>("monthly");
+  const [showRevenueRange, setShowRevenueRange] = useState(false);
+  const [revenueStart, setRevenueStart] = useState("");
+  const [revenueEnd, setRevenueEnd] = useState("");
 
   // Sanity check / sync state
   const [syncing, setSyncing] = useState(false);
@@ -72,8 +69,7 @@ export default function Admin() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("/api/google-events");
-        const data = await r.json();
+        const data = await fetchGoogleEvents();
         setGcalEvents(data);
       } catch {
         setGcalEvents([]);
@@ -83,17 +79,15 @@ export default function Admin() {
 
   async function fetchGigs() {
     setLoading(true);
-    const res = await fetch("/api/gigs");
-    const data = await res.json();
-    setGigs(
-      data.map((gig: any) => ({
-        ...gig,
-        _id: gig._id?.toString(),
-        // normalize to yyyy-mm-dd for inputs & calendar mapping
-        date: new Date(gig.date).toISOString().slice(0, 10),
-      }))
-    );
-    setLoading(false);
+    try {
+      const data = await fetchGigsFromApi();
+      setGigs(data);
+    } catch (error) {
+      console.error(error);
+      setGigs([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openModal(gig: Gig | null = null) {
@@ -164,32 +158,15 @@ export default function Admin() {
 
     setSaving(true);
 
-    const method = currentGig ? "PUT" : "POST";
-    const payload: any = {
-      ...formData,
-      fee: Number(formData.fee) || 0,
-    };
-
-    if (currentGig?._id) payload._id = currentGig._id;
-
     try {
-      const res = await fetch("/api/gigs", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if ([200, 201, 204].includes(res.status)) {
-        await fetchGigs();
-        closeModal();
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error("Error response:", errorData);
-        alert(`Failed to save gig: ${errorData.error || "Server error"}`);
-      }
+      await saveGig(formData, currentGig);
+      await fetchGigs();
+      closeModal();
     } catch (error) {
       console.error(error);
-      alert("Failed to save gig: An error occurred during the request.");
+      const message =
+        error instanceof Error ? error.message : "An error occurred during the request.";
+      alert(`Failed to save gig: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -199,44 +176,13 @@ export default function Admin() {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
     try {
-      const res = await fetch(`/api/gigs?id=${currentGig._id}`, { method: "DELETE" });
-      if ([200, 204].includes(res.status)) {
-        await fetchGigs();
-        closeModal();
-      } else {
-        alert("Failed to delete gig: The server responded with an error.");
-      }
+      await deleteGig(currentGig._id);
+      await fetchGigs();
+      closeModal();
     } catch (error) {
+      console.error(error);
       alert("Failed to delete gig: An error occurred during the request.");
     }
-  }
-
-  function groupGigsByDate(gigs: Gig[]) {
-    return gigs.reduce((acc, gig) => {
-      const date = new Date(gig.date);
-      const year = date.getFullYear().toString();
-      const month = date.toLocaleString("default", { month: "long" });
-      acc[year] = acc[year] || {};
-      acc[year][month] = acc[year][month] || [];
-      acc[year][month].push(gig);
-      return acc;
-    }, {} as { [year: string]: { [month: string]: Gig[] } });
-  }
-
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  }
-
-  function formatTime(timeString?: string) {
-    if (!timeString) return "";
-    const [hours, minutes] = timeString.split(":");
-    return `${hours}:${minutes}`;
   }
 
   function openCreateAt(dateISO: string, startTimeHHmm?: string) {
@@ -258,22 +204,6 @@ export default function Admin() {
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
   const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
 
-  function matchesSearch(g: Gig, q: string) {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return true;
-    const haystack = [
-      g.venue,
-      g.description ?? "",
-      g.internalNotes ?? "",
-      g.date, // yyyy-mm-dd
-      g.startTime ?? "",
-      String(g.fee ?? ""),
-    ]
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(needle);
-  }
-
   const displayedGigs = (search ? gigs : futureOnly).filter((g) => matchesSearch(g, search));
 
   // NEW: run the calendar sanity check / sync
@@ -283,17 +213,7 @@ export default function Admin() {
     setSyncResult(null);
 
     try {
-      const res = await fetch("/api/gigs-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Sync failed (${res.status}): ${text || res.statusText}`);
-      }
-
-      const data = (await res.json()) as SyncResult;
+      const data = await runCalendarSyncApi();
       setSyncResult(data);
     } catch (e: any) {
       setSyncError(e?.message || "Unknown error running sync");
@@ -302,356 +222,114 @@ export default function Admin() {
     }
   }
 
+  const isGigsSection =
+    activeSection === "gigs-list" || activeSection === "gigs-calendar";
+  const pageTitle =
+    activeSection === "gigs-list"
+      ? "Gig Listings"
+      : activeSection === "gigs-calendar"
+        ? "Calendar"
+        : activeSection === "payments-revenue"
+          ? "Revenue Rundown"
+          : "Tools";
+
+  const revenueSummary = buildRevenueSummary({
+    gigs,
+    granularity: revenueGranularity,
+    revenueStart,
+    revenueEnd,
+  });
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
 
-      <Tabs defaultValue="list" className="space-y-6">
-        {/* Top bar: tabs + actions */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <TabsList>
-            <TabsTrigger value="list">Gig listings</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
-          </TabsList>
+      <AdminMenuBar
+        activeSection={activeSection}
+        isGigsSection={isGigsSection}
+        pageTitle={pageTitle}
+        onSectionChange={setActiveSection}
+      />
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            <Button
-              variant="outline"
-              onClick={runCalendarSync}
-              disabled={syncing}
-              className="whitespace-nowrap"
-            >
-              {syncing ? "Running calendar sync…" : "Calendar sanity check"}
-            </Button>
-            <Button onClick={() => openModal()} className="px-8 py-4 text-lg">
-              Add Gig
-            </Button>
-          </div>
-        </div>
+      <AdminHeader
+        pageTitle={pageTitle}
+        description={
+          isGigsSection
+            ? "View and manage gigs."
+            : activeSection === "payments-revenue"
+              ? "Track income trends and compare across time periods."
+              : "This section is ready for future updates."
+        }
+        showAddGig={isGigsSection}
+        onAddGig={() => openModal()}
+      />
 
-        {/* Sync result / errors (shown above views) */}
-        {(syncError || syncResult) && (
-          <div className="text-sm space-y-1">
-            {syncError && <p className="text-red-400">Sync error: {syncError}</p>}
-            {syncResult && (
-              <div className="text-muted-foreground">
-                <p>
-                  Calendar sync — Upcoming: {syncResult.totalUpcoming} • Created:{" "}
-                  {syncResult.createdCount} • Recreated: {syncResult.recreatedCount} • Already OK:{" "}
-                  {syncResult.skippedCount}
-                </p>
-                {syncResult.errors.length > 0 && (
-                  <details className="mt-1">
-                    <summary className="cursor-pointer">
-                      View sync issues ({syncResult.errors.length})
-                    </summary>
-                    <ul className="list-disc list-inside mt-1 space-y-0.5">
-                      {syncResult.errors.map((e, idx) => (
-                        <li key={idx}>
-                          Gig <span className="font-mono text-xs">{e.gigId}</span>: {e.message}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+      {activeSection === "gigs-list" && (
+        <GigsListSection
+          loading={loading}
+          search={search}
+          displayedGigs={displayedGigs}
+          onSearchChange={setSearch}
+          onClearSearch={() => setSearch("")}
+          onSelectGig={openModal}
+        />
+      )}
 
-        <TabsContent value="list" className="mt-4">
-          <div className="flex items-center gap-3 mb-6">
-            <Label htmlFor="gigSearch" className="whitespace-nowrap">
-              Search gigs:
-            </Label>
-            <div className="relative flex-1">
-              <Input
-                id="gigSearch"
-                placeholder="Search by Venue, Notes, Description, Date etc."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-muted-foreground hover:text-foreground"
-                  aria-label="Clear search"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-          {loading ? (
-            <p>Loading gigs...</p>
-          ) : displayedGigs.length === 0 ? (
-            <p>No gigs found.</p>
-          ) : (
-            Object.entries(groupGigsByDate(displayedGigs)).map(([year, months]) => (
-              <section key={year} className="mb-20">
-                <h2 className="text-4xl font-semibold border-b border-muted pb-3 mb-8">
-                  {year}
-                </h2>
-                {Object.entries(months).map(([month, monthGigs]) => (
-                  <div key={month} className="mb-12">
-                    <h3 className="text-2xl font-semibold mb-6">{month}</h3>
-                    <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                      {monthGigs.map((gig) => (
-                        <div
-                          key={gig._id}
-                          onClick={() => openModal(gig)}
-                          className="p-6 border border-emerald-600 rounded-lg cursor-pointer bg-gray-900 hover:bg-emerald-800 hover:shadow-lg transition-all relative"
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <strong className="text-emerald-500 text-xl">
-                              {gig.venue}
-                            </strong>
-                            <span className="text-sm text-muted-foreground">
-                              {formatDate(gig.date)}
-                            </span>
-                          </div>
-                          {gig.postersNeeded && (
-                            <div className="absolute top-[2px] right-[2px] bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
-                              Posters Needed!
-                            </div>
-                          )}
-                          {gig.startTime && (
-                            <p className="text-sm text-emerald-300 mb-2">
-                              Start: {formatTime(gig.startTime)}
-                            </p>
-                          )}
-                          {gig.description && (
-                            <p className="text-muted-foreground mb-4">
-                              {gig.internalNotes}
-                            </p>
-                          )}
-                          <div className="flex justify-between items-end">
-                            <p className="text-xl text-emerald-400">£{gig.fee}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            ))
-          )}
-        </TabsContent>
+      {activeSection === "gigs-calendar" && (
+        <GigsCalendarSection
+          loading={loading}
+          gigs={displayedGigs}
+          extraEvents={gcalEvents}
+          onEventClick={(gig) => openModal(gig)}
+          onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
+        />
+      )}
 
-        <TabsContent value="calendar" className="mt-4 mb-12">
-          {loading ? (
-            <p>Loading calendar…</p>
-          ) : (
-            <GigCalendar
-              gigs={displayedGigs} // keep list/calendar in sync with search
-              extraEvents={gcalEvents}
-              onEventClick={(gig: Gig) => openModal(gig)}
-              onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
-            />
-          )}
-        </TabsContent>
-      </Tabs>
+      {activeSection === "payments-revenue" && (
+        <RevenueRundownSection
+          granularity={revenueGranularity}
+          onGranularityChange={setRevenueGranularity}
+          showRange={showRevenueRange}
+          onToggleRange={() => setShowRevenueRange((prev) => !prev)}
+          revenueStart={revenueStart}
+          revenueEnd={revenueEnd}
+          onStartChange={setRevenueStart}
+          onEndChange={setRevenueEnd}
+          onClearRange={() => {
+            setRevenueStart("");
+            setRevenueEnd("");
+          }}
+          summary={revenueSummary}
+        />
+      )}
 
-      {/* Modal */}
-      <DialogPrimitive.Root open={isOpen} onOpenChange={setIsOpen}>
-        <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-[1px]" />
-          <DialogPrimitive.Content
-            className="fixed z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-                       w-full max-w-[425px] bg-gray-900 text-white rounded-lg border border-white/10
-                       shadow-xl p-6 sm:p-8 focus:outline-none"
-          >
-            {saving && (
-              <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] grid place-items-center rounded-lg">
-                <div className="flex items-center gap-3">
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                  </svg>
-                  <span>Saving…</span>
-                </div>
-              </div>
-            )}
+      {activeSection === "tools" && (
+        <ToolsSection
+          syncing={syncing}
+          syncError={syncError}
+          syncResult={syncResult}
+          onRunCalendarSync={runCalendarSync}
+        />
+      )}
 
-            <div className="mb-4">
-              <h2 className="text-xl font-semibold">
-                {currentGig ? "Edit Gig" : "Add Gig"}
-              </h2>
-              <p className="text-sm text-white/70">
-                {currentGig
-                  ? "Update your gig details below."
-                  : "Enter details for your new gig."}
-              </p>
-            </div>
-
-            <form onSubmit={saveGig} className="space-y-4" aria-busy={saving}>
-              <div className="relative">
-                <Label htmlFor="venue">Venue</Label>
-                <Input
-                  id="venue"
-                  name="venue"
-                  value={formData.venue}
-                  onChange={handleChange}
-                  autoComplete="off"
-                />
-                {venueSuggestions.length > 0 && (
-                  <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-[110] rounded-md overflow-hidden">
-                    {venueSuggestions.map((venue) => (
-                      <li
-                        key={venue}
-                        onClick={() => handleVenueSuggestionClick(venue)}
-                        className="px-3 py-1 cursor-pointer hover:bg-gray-200"
-                      >
-                        {venue}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  type="date"
-                  id="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input
-                  type="time"
-                  id="startTime"
-                  name="startTime"
-                  value={formData.startTime}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="fee">Fee (£)</Label>
-                <Input
-                  type="number"
-                  id="fee"
-                  name="fee"
-                  value={formData.fee}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="internalNotes">Internal Notes</Label>
-                <Input
-                  id="internalNotes"
-                  name="internalNotes"
-                  value={formData.internalNotes ?? ""}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="privateEvent"
-                  name="privateEvent"
-                  checked={!!formData.privateEvent}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, privateEvent: !!checked }))
-                  }
-                />
-                <Label htmlFor="privateEvent">Private Event</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="postersNeeded"
-                  name="postersNeeded"
-                  checked={!!formData.postersNeeded}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({ ...prev, postersNeeded: !!checked }))
-                  }
-                />
-                <Label htmlFor="postersNeeded">Posters Needed</Label>
-              </div>
-
-              <div className="flex justify-between pt-2">
-                {currentGig && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={deleteGig}
-                    disabled={saving}
-                  >
-                    Delete
-                  </Button>
-                )}
-                <div className="ml-auto">
-                  <Button type="submit" disabled={saving}>
-                    {saving && (
-                      <svg
-                        className="animate-spin h-4 w-4 mr-2"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                        />
-                      </svg>
-                    )}
-                    {saving ? "Saving..." : currentGig ? "Save Changes" : "Add Gig"}
-                  </Button>
-                </div>
-              </div>
-            </form>
-
-            <DialogPrimitive.Close
-              className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </DialogPrimitive.Close>
-          </DialogPrimitive.Content>
-        </DialogPrimitive.Portal>
-      </DialogPrimitive.Root>
+      <GigModal
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        saving={saving}
+        currentGig={currentGig}
+        formData={formData}
+        venueSuggestions={venueSuggestions}
+        onChange={handleChange}
+        onVenueSuggestionClick={handleVenueSuggestionClick}
+        onSave={saveGig}
+        onDelete={deleteGig}
+        onTogglePrivate={(checked) =>
+          setFormData((prev) => ({ ...prev, privateEvent: checked }))
+        }
+        onTogglePosters={(checked) =>
+          setFormData((prev) => ({ ...prev, postersNeeded: checked }))
+        }
+      />
     </div>
   );
 }
