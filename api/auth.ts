@@ -1,4 +1,3 @@
-// api/auth.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';

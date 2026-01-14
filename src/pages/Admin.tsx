@@ -14,8 +14,8 @@ import {
 import {
   fetchGigs as fetchGigsFromApi,
   fetchGoogleEvents,
-  saveGig,
-  deleteGig,
+  saveGig as saveGigApi,
+  deleteGig as deleteGigApi,
   runCalendarSync as runCalendarSyncApi,
 } from "./admin/services/gigs";
 import AdminMenuBar from "./admin/components/AdminMenuBar";
@@ -148,7 +148,7 @@ export default function Admin() {
     setVenueSuggestions([]);
   }
 
-  async function saveGig(e: FormEvent) {
+  async function handleSaveGig(e: FormEvent) {
     e.preventDefault();
 
     if (!formData.date) {
@@ -159,7 +159,7 @@ export default function Admin() {
     setSaving(true);
 
     try {
-      await saveGig(formData, currentGig);
+      await saveGigApi(formData, currentGig);
       await fetchGigs();
       closeModal();
     } catch (error) {
@@ -172,11 +172,11 @@ export default function Admin() {
     }
   }
 
-  async function deleteGig() {
+  async function handleDeleteGig() {
     if (!currentGig?._id) return;
     if (!confirm("Are you sure you want to delete this gig?")) return;
     try {
-      await deleteGig(currentGig._id);
+      await deleteGigApi(currentGig._id);
       await fetchGigs();
       closeModal();
     } catch (error) {
@@ -321,8 +321,8 @@ export default function Admin() {
         venueSuggestions={venueSuggestions}
         onChange={handleChange}
         onVenueSuggestionClick={handleVenueSuggestionClick}
-        onSave={saveGig}
-        onDelete={deleteGig}
+        onSave={handleSaveGig}
+        onDelete={handleDeleteGig}
         onTogglePrivate={(checked) =>
           setFormData((prev) => ({ ...prev, privateEvent: checked }))
         }
