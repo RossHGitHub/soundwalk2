@@ -5,6 +5,11 @@ export type Gig = {
   startTime?: string;
   description?: string;
   fee?: number | string;
+  paymentMethod?: "Cash" | "Bank Transfer" | "";
+  paymentSplit?: "Even" | "Customise";
+  paymentSplitRoss?: number | string;
+  paymentSplitKeith?: number | string;
+  paymentSplitBarry?: number | string;
   privateEvent?: boolean;
   postersNeeded?: boolean;
   internalNotes?: string;
@@ -22,4 +27,5 @@ export type AdminSection =
   | "gigs-list"
   | "gigs-calendar"
   | "payments-revenue"
+  | "payments-payslips"
   | "tools";

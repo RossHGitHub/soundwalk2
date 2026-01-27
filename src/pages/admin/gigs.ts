@@ -1,4 +1,5 @@
 import type { Gig } from "./types";
+import { formatDate } from "../../lib/date";
 
 export function groupGigsByDate(gigs: Gig[]) {
   return gigs.reduce((acc, gig) => {
@@ -12,15 +13,7 @@ export function groupGigsByDate(gigs: Gig[]) {
   }, {} as { [year: string]: { [month: string]: Gig[] } });
 }
 
-export function formatDate(dateString: string) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+export { formatDate };
 
 export function formatTime(timeString?: string) {
   if (!timeString) return "";

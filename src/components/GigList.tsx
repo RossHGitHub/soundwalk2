@@ -6,6 +6,7 @@ import {
   DialogContent,
 } from "../components/ui/dialog"
 import soundwalk_stack from "../assets/img/soundwalk_stack2.jpeg";
+import { formatDate } from "../lib/date";
 type Gig = {
   _id?: string;
   venue: string;
@@ -25,15 +26,6 @@ type GigListProps = {
 };
 export function GigList({ data }: GigListProps) {
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
   return (
     <>
       {Object.entries(data).map(([year, months]) => (

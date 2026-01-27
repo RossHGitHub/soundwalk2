@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 
 import Hero from "../components/Hero";
@@ -23,6 +23,7 @@ import AdminHeader from "./admin/components/AdminHeader";
 import GigsListSection from "./admin/components/GigsListSection";
 import GigsCalendarSection from "./admin/components/GigsCalendarSection";
 import RevenueRundownSection from "./admin/components/RevenueRundownSection";
+import PayslipsSection from "./admin/components/PayslipsSection";
 import ToolsSection from "./admin/components/ToolsSection";
 import GigModal from "./admin/components/GigModal";
 
@@ -37,6 +38,11 @@ export default function Admin() {
     startTime: "",
     description: "",
     fee: "",
+    paymentMethod: "",
+    paymentSplit: "Even",
+    paymentSplitRoss: "",
+    paymentSplitKeith: "",
+    paymentSplitBarry: "",
     privateEvent: false,
     postersNeeded: false,
     internalNotes: "",
@@ -61,6 +67,7 @@ export default function Admin() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchGigs();
@@ -97,6 +104,11 @@ export default function Admin() {
         ...gig,
         _id: gig._id,
         internalNotes: gig.internalNotes ?? "",
+        paymentMethod: gig.paymentMethod ?? "",
+        paymentSplit: gig.paymentSplit ?? "Even",
+        paymentSplitRoss: gig.paymentSplitRoss ?? "",
+        paymentSplitKeith: gig.paymentSplitKeith ?? "",
+        paymentSplitBarry: gig.paymentSplitBarry ?? "",
       });
     } else {
       setCurrentGig(null);
@@ -106,6 +118,11 @@ export default function Admin() {
         startTime: "",
         description: "",
         fee: "",
+        paymentMethod: "",
+        paymentSplit: "Even",
+        paymentSplitRoss: "",
+        paymentSplitKeith: "",
+        paymentSplitBarry: "",
         privateEvent: false,
         postersNeeded: false,
         internalNotes: "",
@@ -121,13 +138,26 @@ export default function Admin() {
     setSaving(false);
   }
 
-  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) {
     const { name, value, type } = e.target;
     setFormData((prev) => {
       const updatedData = {
         ...prev,
         [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
       };
+
+      const nextPaymentSplit =
+        name === "paymentSplit" ? value : updatedData.paymentSplit ?? "Even";
+      const nextFee = name === "fee" ? Number(value) || 0 : Number(updatedData.fee) || 0;
+      if (nextPaymentSplit === "Even") {
+        const evenSplit = Math.round(nextFee / 3);
+        updatedData.paymentSplitRoss = evenSplit;
+        updatedData.paymentSplitKeith = evenSplit;
+        updatedData.paymentSplitBarry = evenSplit;
+      }
+
       if (name === "venue") {
         if (value.length > 0) {
           const uniqueVenues = Array.from(new Set(gigs.map((g) => g.venue)));
@@ -154,6 +184,23 @@ export default function Admin() {
     if (!formData.date) {
       alert("Please select a date");
       return;
+    }
+
+    if (!formData.paymentMethod) {
+      alert("Please select a payment method.");
+      return;
+    }
+
+    if (formData.paymentSplit === "Customise") {
+      const feeNumber = Number(formData.fee) || 0;
+      const splitSum =
+        (Number(formData.paymentSplitRoss) || 0) +
+        (Number(formData.paymentSplitKeith) || 0) +
+        (Number(formData.paymentSplitBarry) || 0);
+      if (Math.abs(splitSum - feeNumber) > 0.01) {
+        alert("Payment split total must match the gig fee.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -193,6 +240,11 @@ export default function Admin() {
       startTime: startTimeHHmm || "", // e.g. from Week slot
       description: "",
       fee: "",
+      paymentMethod: "",
+      paymentSplit: "Even",
+      paymentSplitRoss: "",
+      paymentSplitKeith: "",
+      paymentSplitBarry: "",
       privateEvent: false,
       postersNeeded: false,
       internalNotes: "",
@@ -231,6 +283,8 @@ export default function Admin() {
         ? "Calendar"
         : activeSection === "payments-revenue"
           ? "Revenue Rundown"
+          : activeSection === "payments-payslips"
+            ? "Payslips"
           : "Tools";
 
   const revenueSummary = buildRevenueSummary({
@@ -240,29 +294,42 @@ export default function Admin() {
     revenueEnd,
   });
 
+  function handleSectionChange(section: AdminSection) {
+    setActiveSection(section);
+    requestAnimationFrame(() => {
+      menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Hero image={SettingsAsset} title="Admin Panel" />
 
-      <AdminMenuBar
-        activeSection={activeSection}
-        isGigsSection={isGigsSection}
-        pageTitle={pageTitle}
-        onSectionChange={setActiveSection}
-      />
+      <div ref={menuRef} className="scroll-mt-[125px]">
+        <AdminMenuBar
+          activeSection={activeSection}
+          isGigsSection={isGigsSection}
+          pageTitle={pageTitle}
+          onSectionChange={handleSectionChange}
+        />
+      </div>
 
-      <AdminHeader
-        pageTitle={pageTitle}
-        description={
-          isGigsSection
-            ? "View and manage gigs."
-            : activeSection === "payments-revenue"
-              ? "Track income trends and compare across time periods."
-              : "This section is ready for future updates."
-        }
-        showAddGig={isGigsSection}
-        onAddGig={() => openModal()}
-      />
+      <div className="scroll-mt-24">
+        <AdminHeader
+          pageTitle={pageTitle}
+          description={
+            isGigsSection
+              ? "View and manage gigs."
+              : activeSection === "payments-revenue"
+                ? "Track income trends and compare across time periods."
+                : activeSection === "payments-payslips"
+                  ? "Generate payslips by band member and month."
+                : "This section is ready for future updates."
+          }
+          showAddGig={isGigsSection}
+          onAddGig={() => openModal()}
+        />
+      </div>
 
       {activeSection === "gigs-list" && (
         <GigsListSection
@@ -301,6 +368,10 @@ export default function Admin() {
           }}
           summary={revenueSummary}
         />
+      )}
+
+      {activeSection === "payments-payslips" && (
+        <PayslipsSection gigs={gigs} />
       )}
 
       {activeSection === "tools" && (

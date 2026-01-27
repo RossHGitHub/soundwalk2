@@ -92,6 +92,15 @@ export default function AdminMenuBar({
                       Revenue Rundown
                     </Button>
                   </SheetClose>
+                  <SheetClose asChild>
+                    <Button
+                      variant={activeSection === "payments-payslips" ? "default" : "outline"}
+                      className="w-full justify-start"
+                      onClick={() => onSectionChange("payments-payslips")}
+                    >
+                      Payslips
+                    </Button>
+                  </SheetClose>
                 </div>
                 <div className="space-y-2">
                   <div className="text-xs uppercase tracking-[0.2em] text-white/50">
@@ -112,54 +121,30 @@ export default function AdminMenuBar({
           </Sheet>
         </div>
 
-        <div className="hidden sm:flex items-center gap-8">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={isGigsSection ? "default" : "outline"}
-                size="sm"
-                className="gap-2 group"
+        <div className="hidden sm:flex flex-wrap items-center gap-5 text-sm">
+          {[
+            { label: "Gig Listings", key: "gigs-list" },
+            { label: "Calendar", key: "gigs-calendar" },
+            { label: "Revenue Rundown", key: "payments-revenue" },
+            { label: "Payslips", key: "payments-payslips" },
+            { label: "Tools", key: "tools" },
+          ].map((item) => {
+            const isActive = activeSection === item.key;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onSectionChange(item.key)}
+                className={`transition ${
+                  isActive
+                    ? "text-emerald-400"
+                    : "text-white/60 hover:text-white"
+                }`}
               >
-                Gigs
-                <span className="text-xs opacity-70 group-data-[state=open]:rotate-180 transition-transform">
-                  ▾
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Gigs</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => onSectionChange("gigs-list")}>
-                Gig Listings
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onSectionChange("gigs-calendar")}>
-                Calendar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="flex items-center gap-3">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/50">
-              Payments
-            </div>
-            <Button
-              variant={activeSection === "payments-revenue" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onSectionChange("payments-revenue")}
-            >
-              Revenue Rundown
-            </Button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs uppercase tracking-[0.2em] text-white/50">
-              Tools
-            </div>
-            <Button
-              variant={activeSection === "tools" ? "default" : "outline"}
-              size="sm"
-              onClick={() => onSectionChange("tools")}
-            >
-              Tools
-            </Button>
-          </div>
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

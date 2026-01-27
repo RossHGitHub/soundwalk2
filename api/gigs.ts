@@ -37,6 +37,10 @@ function getCalendarClient() {
   return google.calendar({ version: 'v3', auth });
 }
 
+function roundToPounds(amount: number) {
+  return Math.round(amount);
+}
+
 export default async function handler(req: any, res: any) {
   const db = await getDb();
   const col = db.collection("gigs");
@@ -72,12 +76,27 @@ export default async function handler(req: any, res: any) {
 
     const { luxon: gigLx, js: gigJs } = buildDates(body.date, body.startTime);
 
+    const feeNumber = Number(body.fee) || 0;
+    const paymentSplit = body.paymentSplit || "Even";
+    const evenSplit = roundToPounds(feeNumber / 3);
+    const splitRoss =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitRoss) || 0;
+    const splitKeith =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitKeith) || 0;
+    const splitBarry =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitBarry) || 0;
+
     const newGig = {
       venue: body.venue || "",
       date: gigJs,                      
       startTime: body.startTime || null,
       description: body.description || "",
-      fee: Number(body.fee) || 0,
+      fee: feeNumber,
+      paymentMethod: body.paymentMethod || "",
+      paymentSplit,
+      paymentSplitRoss: splitRoss,
+      paymentSplitKeith: splitKeith,
+      paymentSplitBarry: splitBarry,
       privateEvent: !!body.privateEvent,
       postersNeeded: !!body.postersNeeded,
       internalNotes: body.internalNotes || "",
@@ -130,12 +149,27 @@ export default async function handler(req: any, res: any) {
 
     const { luxon: gigLx, js: gigJs } = buildDates(body.date, body.startTime);
 
+    const feeNumber = Number(body.fee) || 0;
+    const paymentSplit = body.paymentSplit || "Even";
+    const evenSplit = roundToPounds(feeNumber / 3);
+    const splitRoss =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitRoss) || 0;
+    const splitKeith =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitKeith) || 0;
+    const splitBarry =
+      paymentSplit === "Even" ? evenSplit : Number(body.paymentSplitBarry) || 0;
+
     const update = {
       venue: body.venue || "",
       date: gigJs,                           // keep as JS Date
       startTime: body.startTime || null,
       description: body.description || "",
-      fee: Number(body.fee) || 0,
+      fee: feeNumber,
+      paymentMethod: body.paymentMethod || "",
+      paymentSplit,
+      paymentSplitRoss: splitRoss,
+      paymentSplitKeith: splitKeith,
+      paymentSplitBarry: splitBarry,
       privateEvent: !!body.privateEvent,
       postersNeeded: !!body.postersNeeded,
       internalNotes: body.internalNotes || "", // <- ensure saved
