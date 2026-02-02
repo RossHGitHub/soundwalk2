@@ -19,6 +19,7 @@ type MonthGroup = {
 export default function PayslipsSection({ gigs }: Props) {
   const [selectedPerson, setSelectedPerson] = useState<Person>("Ross");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
   const [collapsedYears, setCollapsedYears] = useState<Record<string, boolean>>(
     {}
   );
@@ -59,6 +60,17 @@ export default function PayslipsSection({ gigs }: Props) {
     );
   }, [monthsByYear, selectedMonth]);
 
+  useEffect(() => {
+    if (selectedYear || monthsByYear.length === 0) return;
+    const availableYears = monthsByYear.map((entry) => entry.year);
+    const currentYear = String(new Date().getFullYear());
+    setSelectedYear(
+      availableYears.includes(currentYear)
+        ? currentYear
+        : availableYears[availableYears.length - 1] ?? ""
+    );
+  }, [monthsByYear, selectedYear]);
+
   const selectedGigs = useMemo(() => {
     if (!selectedMonth) return [];
     return gigs
@@ -72,14 +84,18 @@ export default function PayslipsSection({ gigs }: Props) {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [gigs, selectedMonth]);
 
-  function getPersonPay(gig: Gig) {
-    const value =
+  function getPersonPayValue(gig: Gig) {
+    return (
       selectedPerson === "Ross"
         ? Number(gig.paymentSplitRoss) || 0
         : selectedPerson === "Keith"
           ? Number(gig.paymentSplitKeith) || 0
-          : Number(gig.paymentSplitBarry) || 0;
-    return value.toFixed(2);
+          : Number(gig.paymentSplitBarry) || 0
+    );
+  }
+
+  function getPersonPay(gig: Gig) {
+    return getPersonPayValue(gig).toFixed(2);
   }
 
   function getGigKey(gig: Gig) {
@@ -134,6 +150,26 @@ export default function PayslipsSection({ gigs }: Props) {
     const selectedKeys = selectedGigIds;
     return selectedGigs.filter((gig) => selectedKeys.has(getGigKey(gig)));
   }, [selectedGigs, selectedGigIds]);
+
+  const yearlyMonthTotals = useMemo(() => {
+    if (!selectedYear) return [];
+    const totals = Array.from({ length: 12 }, (_, index) => ({
+      monthIndex: index,
+      label: new Date(2000, index, 1).toLocaleString("default", {
+        month: "long",
+      }),
+      total: 0,
+    }));
+    gigs.forEach((gig) => {
+      if (!gig.date) return;
+      const date = new Date(gig.date);
+      if (Number.isNaN(date.getTime())) return;
+      if (String(date.getFullYear()) !== selectedYear) return;
+      const monthIndex = date.getMonth();
+      totals[monthIndex].total += getPersonPayValue(gig);
+    });
+    return totals;
+  }, [gigs, selectedYear, selectedPerson]);
 
   async function loadImageData(url: string) {
     const res = await fetch(url);
@@ -236,6 +272,87 @@ export default function PayslipsSection({ gigs }: Props) {
       : "Month";
     const yearToken = selectedMonth ? selectedMonth.slice(2, 4) : "YY";
     const filename = `${monthToken}${yearToken}${selectedPerson}SWPayslip.pdf`;
+    doc.save(filename);
+  }
+
+  async function handleGenerateYearlyPayslip() {
+    if (!selectedYear) return;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 48;
+
+    const logoData = await loadImageData(logoUrl);
+    const logoWidth = 140;
+    const logoHeight = 32;
+    doc.addImage(
+      logoData,
+      "JPEG",
+      pageWidth - margin - logoWidth,
+      margin - 6,
+      logoWidth,
+      logoHeight
+    );
+
+    doc.setDrawColor(220);
+    doc.line(margin, margin + 54, pageWidth - margin, margin + 54);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("Payslip", margin, margin + 10);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(60);
+    doc.text(`${selectedYear} • ${selectedPerson}`, margin, margin + 32);
+    doc.setTextColor(20);
+
+    const tableTop = margin + 90;
+    doc.setDrawColor(210);
+    doc.setFillColor(242, 242, 242);
+    doc.rect(margin, tableTop, pageWidth - margin * 2, 26, "F");
+    doc.setTextColor(30);
+    doc.setFont("helvetica", "bold");
+    const yearlyTableWidth = 360;
+    const yearlyTableLeft = (pageWidth - yearlyTableWidth) / 2;
+    const totalColumnX = yearlyTableLeft + yearlyTableWidth - 10;
+    doc.text("Month", yearlyTableLeft + 10, tableTop + 18);
+    doc.text("Total", totalColumnX, tableTop + 18, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(20);
+    let y = tableTop + 44;
+    const rowHeight = 24;
+    let total = 0;
+
+    yearlyMonthTotals.forEach((month, index) => {
+      total += month.total;
+      if (index % 2 === 1) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(margin, y - 16, pageWidth - margin * 2, rowHeight, "F");
+        doc.setTextColor(20);
+      }
+      doc.text(month.label, yearlyTableLeft + 10, y);
+      doc.text(`£${month.total.toFixed(2)}`, totalColumnX, y, {
+        align: "right",
+      });
+      y += rowHeight;
+      if (y > pageHeight - margin - 60) {
+        doc.addPage();
+        y = margin + 20;
+      }
+    });
+
+    const footerY = Math.min(pageHeight - margin, y + 16);
+    doc.setDrawColor(210);
+    doc.line(margin, footerY - 16, pageWidth - margin, footerY - 16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Total", pageWidth - margin - 120, footerY);
+    doc.text(`£${total.toFixed(2)}`, pageWidth - margin - 10, footerY, {
+      align: "right",
+    });
+
+    const filename = `${selectedYear}${selectedPerson}SWPayslip.pdf`;
     doc.save(filename);
   }
 
@@ -359,6 +476,35 @@ export default function PayslipsSection({ gigs }: Props) {
                   );
                 })()
               ))}
+            </div>
+
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <div className="text-xs uppercase tracking-[0.2em] text-white/50">
+                Yearly Payslip Generator
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <select
+                  className="h-9 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white/80"
+                  value={selectedYear}
+                  onChange={(event) => setSelectedYear(event.target.value)}
+                >
+                  {monthsByYear.length === 0 && (
+                    <option value="">No years available</option>
+                  )}
+                  {monthsByYear.map((entry) => (
+                    <option key={entry.year} value={entry.year}>
+                      {entry.year}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateYearlyPayslip}
+                  disabled={!selectedYear}
+                >
+                  Generate
+                </Button>
+              </div>
             </div>
           </div>
         </section>
