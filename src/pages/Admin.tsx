@@ -4,6 +4,8 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
+import { Checkbox } from "../components/ui/checkbox";
+import { Label } from "../components/ui/label";
 
 import type { AdminSection, Gig, SyncResult } from "./admin/types";
 import { matchesSearch } from "./admin/gigs";
@@ -67,6 +69,7 @@ export default function Admin() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [showHistoricGigs, setShowHistoricGigs] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -255,8 +258,8 @@ export default function Admin() {
 
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
   const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
-
-  const displayedGigs = (search ? gigs : futureOnly).filter((g) => matchesSearch(g, search));
+  const filteredGigs = showHistoricGigs ? gigs : futureOnly;
+  const displayedGigs = filteredGigs.filter((g) => matchesSearch(g, search));
 
   // NEW: run the calendar sanity check / sync
   async function runCalendarSync() {
@@ -312,6 +315,31 @@ export default function Admin() {
           pageTitle={pageTitle}
           onSectionChange={handleSectionChange}
         />
+        {activeSection === "gigs-list" && (
+          <div className="mt-3 rounded-xl border border-white/10 bg-gray-950/60 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="showHistoricGigs"
+                  checked={showHistoricGigs}
+                  onCheckedChange={(checked) => {
+                    const nextValue = !!checked;
+                    setShowHistoricGigs(nextValue);
+                    if (nextValue) {
+                      fetchGigs();
+                    }
+                  }}
+                />
+                <Label htmlFor="showHistoricGigs" className="cursor-pointer">
+                  View historic gigs
+                </Label>
+              </div>
+              <span className="text-xs text-white/50">
+                Includes past gigs from the database.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="scroll-mt-24">
