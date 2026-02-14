@@ -311,7 +311,6 @@ export default function Admin() {
       <div ref={menuRef} className="scroll-mt-[125px]">
         <AdminMenuBar
           activeSection={activeSection}
-          isGigsSection={isGigsSection}
           pageTitle={pageTitle}
           onSectionChange={handleSectionChange}
         />

@@ -130,28 +130,27 @@ export default async function handler(req: any, res: any) {
       const timeMin = gigStart.minus({ hours: 6 }).toISO();
       const timeMax = gigStart.plus({ hours: 6 }).toISO();
 
-      const listRes = await calendar.events.list({
+      const listRes: any = await calendar.events.list({
         calendarId,
         timeMin,
         timeMax,
         singleEvents: true,
         orderBy: "startTime",
         maxResults: 50,
-      });
+      } as any);
 
       const items = listRes.data.items || [];
 
       const candidates = items
-        .map((e) => {
+        .map((e: any) => {
           const startISO = e.start?.dateTime || e.start?.date;
           if (!e.id || !startISO) return null;
           const evStart = DateTime.fromISO(startISO).setZone("Europe/London");
           const diffMinutes = Math.abs(evStart.diff(gigStart, "minutes").minutes);
           return { ev: e, diffMinutes };
         })
-        .filter(
-          (x): x is { ev: typeof items[number]; diffMinutes: number } =>
-            !!x && x.diffMinutes <= MATCH_WINDOW_MINUTES
+        .filter((x: any): x is { ev: any; diffMinutes: number } =>
+          !!x && x.diffMinutes <= MATCH_WINDOW_MINUTES
         );
 
       let targetEventId: string | null = null;
@@ -161,7 +160,7 @@ export default async function handler(req: any, res: any) {
         // If we already have a calendarEventId and it's in the candidates, prefer that
         if (gig.calendarEventId) {
           const matchById = candidates.find(
-            (c) => c.ev.id === gig.calendarEventId
+            (c: { ev: any; diffMinutes: number }) => c.ev.id === gig.calendarEventId
           );
           if (matchById && matchById.ev.id) {
             targetEventId = matchById.ev.id;
@@ -204,10 +203,10 @@ export default async function handler(req: any, res: any) {
       }
 
       // 2) No clear matching event -> create a new one
-      const insertRes = await calendar.events.insert({
+      const insertRes: any = await calendar.events.insert({
         calendarId,
         requestBody: payload,
-      });
+      } as any);
 
       const newId = insertRes.data.id;
       if (newId) {

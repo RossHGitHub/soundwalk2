@@ -1,5 +1,6 @@
 import { Card } from "../components/ui/card"
 import { Avatar } from "../components/ui/avatar"
+import type { ReactNode } from "react"
 import promoVideo from "../assets/vid/soundwalkPromo.mp4"
 import RossProfile from "../assets/img/RossProfile.jpg"
 import KeithProfile from "../assets/img/KeithProfile.jpg"
@@ -15,6 +16,11 @@ function FeatureRow({
   image,
   reverse = false,
   children,
+}: {
+  title: string
+  image: string
+  reverse?: boolean
+  children: ReactNode
 }) {
   return (
     <Card className="w-full p-0 overflow-hidden border-1 border-emerald-600 rounded-none lg:rounded-xl">

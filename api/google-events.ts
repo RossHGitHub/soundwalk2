@@ -33,18 +33,18 @@ export default async function handler(req: any, res: any) {
   const tMax = (timeMax as string) || now.plus({ months: 6 }).toISO();
 
   try {
-    const r = await calendar.events.list({
+    const r: any = await calendar.events.list({
       calendarId,
       timeMin: tMin,
       timeMax: tMax,
       singleEvents: true,
       orderBy: "startTime",
       maxResults: 2500,
-    });
+    } as any);
 
     const items =
       (r.data.items || [])
-        .map((e) => {
+        .map((e: any) => {
           // determine all-day vs timed
           const hasAllDay = !!e.start?.date || !!e.end?.date;
           const startISO = hasAllDay

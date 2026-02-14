@@ -1,4 +1,5 @@
 import { requireEnv } from './_envGuard.js';
+import { sendPushNotificationToAll } from './_push.js';
 import { MongoClient, ObjectId } from 'mongodb';
 import { google } from 'googleapis';
 import { DateTime } from 'luxon';
@@ -39,6 +40,62 @@ function getCalendarClient() {
 
 function roundToPounds(amount: number) {
   return Math.round(amount);
+}
+
+function formatGigDateForNotification(dateValue: Date, startTime?: string | null) {
+  let date = DateTime.fromJSDate(dateValue).setZone('Europe/London');
+  if (startTime) {
+    const [hour, minute] = String(startTime).split(':').map(Number);
+    date = date.set({ hour: hour || 0, minute: minute || 0, second: 0, millisecond: 0 });
+    return date.toFormat('dd LLL yyyy, HH:mm');
+  }
+  return date.toFormat('dd LLL yyyy');
+}
+
+async function notifyGigBooked({
+  venue,
+  date,
+  startTime,
+  fee,
+}: {
+  venue: string;
+  date: Date;
+  startTime?: string | null;
+  fee: number;
+}) {
+  const body = `${formatGigDateForNotification(date, startTime)}\nFee: £${roundToPounds(fee)}`;
+  try {
+    await sendPushNotificationToAll({
+      title: `✅ Gig booked: '${venue}'`,
+      body,
+      tag: 'gig-booked',
+      url: '/admin',
+    });
+  } catch (error) {
+    console.error('Failed to send gig booked push notification:', error);
+  }
+}
+
+async function notifyGigCancelled({
+  venue,
+  date,
+  startTime,
+}: {
+  venue: string;
+  date: Date;
+  startTime?: string | null;
+}) {
+  const body = formatGigDateForNotification(date, startTime);
+  try {
+    await sendPushNotificationToAll({
+      title: `❌ Gig Cancelled: '${venue}'`,
+      body,
+      tag: 'gig-cancelled',
+      url: '/admin',
+    });
+  } catch (error) {
+    console.error('Failed to send gig cancelled push notification:', error);
+  }
 }
 
 export default async function handler(req: any, res: any) {
@@ -136,6 +193,13 @@ export default async function handler(req: any, res: any) {
       }
     }
 
+    await notifyGigBooked({
+      venue: newGig.venue,
+      date: newGig.date,
+      startTime: newGig.startTime,
+      fee: feeNumber,
+    });
+
     return res.status(201).json({ ...newGig, _id: r.insertedId.toString() });
   }
 
@@ -147,7 +211,7 @@ export default async function handler(req: any, res: any) {
     if (!ObjectId.isValid(id)) return res.status(400).json({ error: "Invalid ObjectId format" });
     if (!body.date) return res.status(400).json({ error: "Missing date" });
 
-    const { luxon: gigLx, js: gigJs } = buildDates(body.date, body.startTime);
+    const { js: gigJs } = buildDates(body.date, body.startTime);
 
     const feeNumber = Number(body.fee) || 0;
     const paymentSplit = body.paymentSplit || "Even";
@@ -209,7 +273,12 @@ export default async function handler(req: any, res: any) {
     if (!id || typeof id !== "string") return res.status(400).json({ error: "Missing id" });
 
     const _id = new ObjectId(id);
-    const gig = await col.findOne({ _id });
+    const gig = await col.findOne({ _id }) as {
+      venue?: string;
+      date?: Date;
+      startTime?: string | null;
+      calendarEventId?: string | null;
+    } | null;
     if (!gig) return res.status(404).json({ error: "Not found" });
 
     await col.deleteOne({ _id });
@@ -220,6 +289,14 @@ export default async function handler(req: any, res: any) {
       } catch (e) {
         console.error("Error deleting calendar event:", e);
       }
+    }
+
+    if (gig.date instanceof Date) {
+      await notifyGigCancelled({
+        venue: gig.venue || "Unknown venue",
+        date: gig.date,
+        startTime: gig.startTime,
+      });
     }
 
     return res.status(204).end();

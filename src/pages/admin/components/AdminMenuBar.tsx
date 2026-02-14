@@ -7,29 +7,28 @@ import {
   SheetTitle,
   SheetClose,
 } from "../../../components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-} from "../../../components/ui/dropdown-menu";
 import { Menu } from "lucide-react";
 import type { AdminSection } from "../types";
 
 type Props = {
   activeSection: AdminSection;
-  isGigsSection: boolean;
   pageTitle: string;
   onSectionChange: (section: AdminSection) => void;
 };
 
 export default function AdminMenuBar({
   activeSection,
-  isGigsSection,
   pageTitle,
   onSectionChange,
 }: Props) {
+  const menuItems: Array<{ label: string; key: AdminSection }> = [
+    { label: "Gig Listings", key: "gigs-list" },
+    { label: "Calendar", key: "gigs-calendar" },
+    { label: "Revenue Rundown", key: "payments-revenue" },
+    { label: "Payslips", key: "payments-payslips" },
+    { label: "Tools", key: "tools" },
+  ];
+
   return (
     <div className="mt-6 rounded-2xl border border-white/10 bg-gray-950/70 px-4 py-3 sm:px-5 sm:py-4">
       <div className="flex items-center justify-between gap-4">
@@ -122,13 +121,7 @@ export default function AdminMenuBar({
         </div>
 
         <div className="hidden sm:flex flex-wrap items-center gap-5 text-sm">
-          {[
-            { label: "Gig Listings", key: "gigs-list" },
-            { label: "Calendar", key: "gigs-calendar" },
-            { label: "Revenue Rundown", key: "payments-revenue" },
-            { label: "Payslips", key: "payments-payslips" },
-            { label: "Tools", key: "tools" },
-          ].map((item) => {
+          {menuItems.map((item) => {
             const isActive = activeSection === item.key;
             return (
               <button
