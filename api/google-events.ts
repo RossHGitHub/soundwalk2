@@ -1,6 +1,15 @@
 import { google } from "googleapis";
 import { DateTime } from "luxon";
 
+type CalendarFeedEvent = {
+  id: string;
+  title: string;
+  startISO: string;
+  endISO: string;
+  description?: string;
+  allDay?: boolean;
+};
+
 function getCalendarClient() {
   const raw = process.env.GOOGLE_CREDENTIALS;
   if (!raw) return null;
@@ -24,38 +33,60 @@ export default async function handler(req: any, res: any) {
   const calendar = getCalendarClient();
   if (!calendar) return res.status(200).json([]);
 
-  const calendarId =
-    process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
+  const calendarIds = Array.from(
+    new Set([
+      process.env.GOOGLE_CALENDAR_ID,
+      "soundwalkband@gmail.com",
+      "soundwalkgigs@gmail.com",
+    ].filter(Boolean))
+  ) as string[];
   const { timeMin, timeMax } = req.query;
 
   const now = DateTime.now().setZone("Europe/London");
   const tMin = (timeMin as string) || now.minus({ months: 1 }).toISO();
   const tMax = (timeMax as string) || now.plus({ months: 6 }).toISO();
 
-  try {
-    const r: any = await calendar.events.list({
-      calendarId,
-      timeMin: tMin,
-      timeMax: tMax,
-      singleEvents: true,
-      orderBy: "startTime",
-      maxResults: 2500,
-    } as any);
+  const toDedupKey = (event: CalendarFeedEvent) =>
+    [
+      event.title.trim().toLowerCase().replace(/\s+/g, " "),
+      event.startISO,
+      event.endISO,
+      event.allDay ? "all-day" : "timed",
+    ].join("|");
 
-    const items =
-      (r.data.items || [])
+  try {
+    const results = await Promise.allSettled(
+      calendarIds.map((calendarId) =>
+        calendar.events.list({
+          calendarId,
+          timeMin: tMin,
+          timeMax: tMax,
+          singleEvents: true,
+          orderBy: "startTime",
+          maxResults: 2500,
+        } as any)
+      )
+    );
+
+    const deduped = new Map<string, CalendarFeedEvent>();
+
+    results.forEach((result) => {
+      if (result.status !== "fulfilled") {
+        console.error("google-events calendar fetch failed", result.reason);
+        return;
+      }
+
+      const items = (result.value.data.items || [])
         .map((e: any) => {
-          // determine all-day vs timed
           const hasAllDay = !!e.start?.date || !!e.end?.date;
           const startISO = hasAllDay
             ? DateTime.fromISO(e.start!.date!).startOf("day").toISO()
             : e.start?.dateTime ?? null;
-          // Use API’s exclusive end for all-day; client will nudge by -1s.
           const endISO = hasAllDay
             ? DateTime.fromISO(e.end!.date!).toISO()
             : e.end?.dateTime ?? null;
 
-          if (!startISO || !endISO) return null; // drop malformed rows
+          if (!startISO || !endISO) return null;
 
           return {
             id: e.id || `${e.summary || "Event"}-${startISO}`,
@@ -64,18 +95,21 @@ export default async function handler(req: any, res: any) {
             endISO,
             description: e.description || "",
             allDay: hasAllDay,
-          };
+          } satisfies CalendarFeedEvent;
         })
-        .filter(Boolean) as Array<{
-        id: string;
-        title: string;
-        startISO: string;
-        endISO: string;
-        description?: string;
-        allDay?: boolean;
-      }>;
+        .filter(Boolean) as CalendarFeedEvent[];
 
-    res.status(200).json(items);
+      items.forEach((item) => {
+        const key = toDedupKey(item);
+        if (!deduped.has(key)) {
+          deduped.set(key, item);
+        }
+      });
+    });
+
+    res.status(200).json(
+      Array.from(deduped.values()).sort((a, b) => a.startISO.localeCompare(b.startISO))
+    );
   } catch (err) {
     console.error("google-events error", err);
     res.status(200).json([]); // fail-soft

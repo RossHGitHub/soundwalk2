@@ -28,12 +28,15 @@ import RevenueRundownSection from "./admin/components/RevenueRundownSection";
 import PayslipsSection from "./admin/components/PayslipsSection";
 import ToolsSection from "./admin/components/ToolsSection";
 import GigModal from "./admin/components/GigModal";
+import GigDetailsModal from "./admin/components/GigDetailsModal";
 
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [currentGig, setCurrentGig] = useState<Gig | null>(null);
+  const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [formData, setFormData] = useState<Gig>({
     venue: "",
     date: "",
@@ -100,11 +103,12 @@ export default function Admin() {
     }
   }
 
-  function openModal(gig: Gig | null = null) {
+  function buildFormData(gig: Gig | null = null) {
     if (gig) {
-      setCurrentGig(gig);
-      setFormData({
+      return {
         ...gig,
+        description:
+          gig.description ?? (gig._externalGoogleId ? gig.internalNotes ?? "" : ""),
         _id: gig._id,
         internalNotes: gig.internalNotes ?? "",
         paymentMethod: gig.paymentMethod ?? "",
@@ -112,33 +116,61 @@ export default function Admin() {
         paymentSplitRoss: gig.paymentSplitRoss ?? "",
         paymentSplitKeith: gig.paymentSplitKeith ?? "",
         paymentSplitBarry: gig.paymentSplitBarry ?? "",
-      });
-    } else {
-      setCurrentGig(null);
-      setFormData({
-        venue: "",
-        date: "",
-        startTime: "",
-        description: "",
-        fee: "",
-        paymentMethod: "",
-        paymentSplit: "Even",
-        paymentSplitRoss: "",
-        paymentSplitKeith: "",
-        paymentSplitBarry: "",
-        privateEvent: false,
-        postersNeeded: false,
-        internalNotes: "",
-      });
+      } satisfies Gig;
     }
-    setSaving(false);
-    setIsOpen(true);
+
+    return {
+      venue: "",
+      date: "",
+      startTime: "",
+      description: "",
+      fee: "",
+      paymentMethod: "",
+      paymentSplit: "Even",
+      paymentSplitRoss: "",
+      paymentSplitKeith: "",
+      paymentSplitBarry: "",
+      privateEvent: false,
+      postersNeeded: false,
+      internalNotes: "",
+    } satisfies Gig;
   }
 
-  function closeModal() {
-    setIsOpen(false);
+  function openEditModal(gig: Gig | null = null) {
+    const editableGig = gig?._id ? gig : null;
+    const seededForm = gig ? buildFormData(gig) : buildFormData(null);
+
+    setCurrentGig(editableGig);
+    setFormData(seededForm);
+    setSaving(false);
+    setIsEditModalOpen(true);
+  }
+
+  function closeEditModal() {
+    setIsEditModalOpen(false);
+    setCurrentGig(null);
     setVenueSuggestions([]);
     setSaving(false);
+  }
+
+  function openDetailsModal(gig: Gig) {
+    setSelectedGig(gig);
+    setIsDetailsModalOpen(true);
+  }
+
+  function handleEditModalOpenChange(open: boolean) {
+    if (!open) {
+      closeEditModal();
+      return;
+    }
+    setIsEditModalOpen(true);
+  }
+
+  function handleDetailsModalOpenChange(open: boolean) {
+    setIsDetailsModalOpen(open);
+    if (!open) {
+      setSelectedGig(null);
+    }
   }
 
   function handleChange(
@@ -211,7 +243,7 @@ export default function Admin() {
     try {
       await saveGigApi(formData, currentGig);
       await fetchGigs();
-      closeModal();
+      closeEditModal();
     } catch (error) {
       console.error(error);
       const message =
@@ -228,7 +260,7 @@ export default function Admin() {
     try {
       await deleteGigApi(currentGig._id);
       await fetchGigs();
-      closeModal();
+      closeEditModal();
     } catch (error) {
       console.error(error);
       alert("Failed to delete gig: An error occurred during the request.");
@@ -236,7 +268,6 @@ export default function Admin() {
   }
 
   function openCreateAt(dateISO: string, startTimeHHmm?: string) {
-    setCurrentGig(null);
     setFormData({
       venue: "",
       date: dateISO, // yyyy-mm-dd (Europe/London)
@@ -252,8 +283,14 @@ export default function Admin() {
       postersNeeded: false,
       internalNotes: "",
     });
+    setCurrentGig(null);
     setSaving(false);
-    setIsOpen(true);
+    setIsEditModalOpen(true);
+  }
+
+  function handleEditFromDetails(gig: Gig) {
+    setIsDetailsModalOpen(false);
+    openEditModal(gig);
   }
 
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
@@ -354,7 +391,7 @@ export default function Admin() {
                 : "This section is ready for future updates."
           }
           showAddGig={isGigsSection}
-          onAddGig={() => openModal()}
+          onAddGig={() => openEditModal()}
         />
       </div>
 
@@ -365,7 +402,7 @@ export default function Admin() {
           displayedGigs={displayedGigs}
           onSearchChange={setSearch}
           onClearSearch={() => setSearch("")}
-          onSelectGig={openModal}
+          onSelectGig={openDetailsModal}
         />
       )}
 
@@ -374,7 +411,7 @@ export default function Admin() {
           loading={loading}
           gigs={displayedGigs}
           extraEvents={gcalEvents}
-          onEventClick={(gig) => openModal(gig)}
+          onEventClick={openDetailsModal}
           onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
         />
       )}
@@ -410,9 +447,16 @@ export default function Admin() {
         />
       )}
 
+      <GigDetailsModal
+        isOpen={isDetailsModalOpen}
+        onOpenChange={handleDetailsModalOpenChange}
+        gig={selectedGig}
+        onEdit={handleEditFromDetails}
+      />
+
       <GigModal
-        isOpen={isOpen}
-        onOpenChange={setIsOpen}
+        isOpen={isEditModalOpen}
+        onOpenChange={handleEditModalOpenChange}
         saving={saving}
         currentGig={currentGig}
         formData={formData}

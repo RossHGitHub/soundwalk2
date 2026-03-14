@@ -1,5 +1,6 @@
 export type Gig = {
   _id?: string;
+  _externalGoogleId?: string;
   venue: string;
   date: string; // ISO yyyy-mm-dd in state
   startTime?: string;

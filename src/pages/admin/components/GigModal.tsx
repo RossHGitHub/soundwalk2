@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { type ChangeEvent, type FormEvent } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -39,14 +39,6 @@ export default function GigModal({
   onTogglePrivate,
   onTogglePosters,
 }: Props) {
-  const [isEditing, setIsEditing] = useState(!currentGig);
-
-  useEffect(() => {
-    if (isOpen) {
-      setIsEditing(!currentGig);
-    }
-  }, [isOpen, currentGig]);
-
   const feeNumber = Number(formData.fee) || 0;
   const splitSum =
     (Number(formData.paymentSplitRoss) || 0) +
@@ -105,16 +97,6 @@ export default function GigModal({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {currentGig && (
-                <Button
-                  type="button"
-                  variant={isEditing ? "secondary" : "outline"}
-                  onClick={() => setIsEditing((prev) => !prev)}
-                  disabled={saving}
-                >
-                  {isEditing ? "Done Editing" : "Edit"}
-                </Button>
-              )}
               <DialogPrimitive.Close
                 className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
                 aria-label="Close"
@@ -137,9 +119,8 @@ export default function GigModal({
                   value={formData.venue}
                   onChange={onChange}
                   autoComplete="off"
-                  disabled={!isEditing}
                 />
-                {isEditing && venueSuggestions.length > 0 && (
+                {venueSuggestions.length > 0 && (
                   <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-[110] rounded-md overflow-hidden">
                     {venueSuggestions.map((venue) => (
                       <li
@@ -163,7 +144,6 @@ export default function GigModal({
                     name="date"
                     value={formData.date}
                     onChange={onChange}
-                    disabled={!isEditing}
                   />
                 </div>
                 <div>
@@ -174,7 +154,6 @@ export default function GigModal({
                     name="startTime"
                     value={formData.startTime}
                     onChange={onChange}
-                    disabled={!isEditing}
                   />
                 </div>
               </div>
@@ -191,7 +170,6 @@ export default function GigModal({
                   name="description"
                   value={formData.description}
                   onChange={onChange}
-                  disabled={!isEditing}
                 />
               </div>
 
@@ -202,7 +180,6 @@ export default function GigModal({
                   name="internalNotes"
                   value={formData.internalNotes ?? ""}
                   onChange={onChange}
-                  disabled={!isEditing}
                 />
               </div>
 
@@ -213,7 +190,6 @@ export default function GigModal({
                     name="postersNeeded"
                     checked={!!formData.postersNeeded}
                     onCheckedChange={(checked) => onTogglePosters(!!checked)}
-                    disabled={!isEditing}
                   />
                   <Label htmlFor="postersNeeded">Posters Needed</Label>
                 </div>
@@ -223,7 +199,6 @@ export default function GigModal({
                     name="privateEvent"
                     checked={!!formData.privateEvent}
                     onCheckedChange={(checked) => onTogglePrivate(!!checked)}
-                    disabled={!isEditing}
                   />
                   <Label htmlFor="privateEvent">Private Event</Label>
                 </div>
@@ -243,7 +218,6 @@ export default function GigModal({
                     name="fee"
                     value={formData.fee}
                     onChange={onChange}
-                    disabled={!isEditing}
                   />
                 </div>
                 <div>
@@ -253,14 +227,13 @@ export default function GigModal({
                     name="paymentMethod"
                     value={formData.paymentMethod ?? ""}
                     onChange={onChange}
-                    disabled={!isEditing}
                     className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                   >
                     <option value="">Select a method</option>
                     <option value="Cash">Cash</option>
                     <option value="Bank Transfer">Bank Transfer</option>
                   </select>
-                  {paymentMethodMissing && isEditing && (
+                  {paymentMethodMissing && (
                     <p className="text-sm text-red-400 mt-1">
                       Payment method is required.
                     </p>
@@ -275,7 +248,6 @@ export default function GigModal({
                   name="paymentSplit"
                   value={formData.paymentSplit ?? "Even"}
                   onChange={onChange}
-                  disabled={!isEditing}
                   className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                 >
                   <option value="Even">Even</option>
@@ -296,7 +268,6 @@ export default function GigModal({
                       name="paymentSplitRoss"
                       value={formData.paymentSplitRoss ?? ""}
                       onChange={onChange}
-                      disabled={!isEditing}
                       className="max-w-32"
                     />
                   </div>
@@ -311,7 +282,6 @@ export default function GigModal({
                       name="paymentSplitKeith"
                       value={formData.paymentSplitKeith ?? ""}
                       onChange={onChange}
-                      disabled={!isEditing}
                       className="max-w-32"
                     />
                   </div>
@@ -326,7 +296,6 @@ export default function GigModal({
                       name="paymentSplitBarry"
                       value={formData.paymentSplitBarry ?? ""}
                       onChange={onChange}
-                      disabled={!isEditing}
                       className="max-w-32"
                     />
                   </div>
@@ -354,7 +323,7 @@ export default function GigModal({
               <div className="ml-auto">
                 <Button
                   type="submit"
-                  disabled={saving || !isEditing || splitMismatch || paymentMethodMissing}
+                  disabled={saving || splitMismatch || paymentMethodMissing}
                 >
                   {saving && (
                     <svg
