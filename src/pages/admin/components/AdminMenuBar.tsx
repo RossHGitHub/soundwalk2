@@ -26,6 +26,7 @@ export default function AdminMenuBar({
     { label: "Calendar", key: "gigs-calendar" },
     { label: "Revenue Rundown", key: "payments-revenue" },
     { label: "Payslips", key: "payments-payslips" },
+    { label: "Set List Builder", key: "set-list-builder" },
     { label: "Tools", key: "tools" },
   ];
 
@@ -98,6 +99,15 @@ export default function AdminMenuBar({
                       onClick={() => onSectionChange("payments-payslips")}
                     >
                       Payslips
+                    </Button>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Button
+                      variant={activeSection === "set-list-builder" ? "default" : "outline"}
+                      className="w-full justify-start"
+                      onClick={() => onSectionChange("set-list-builder")}
+                    >
+                      Set List Builder
                     </Button>
                   </SheetClose>
                 </div>

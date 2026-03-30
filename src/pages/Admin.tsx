@@ -7,7 +7,14 @@ import SettingsAsset from "../assets/img/settings_asset.jpg";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 
-import type { AdminSection, Gig, SyncResult } from "./admin/types";
+import type {
+  AdminSection,
+  Gig,
+  GoogleCalendarFeed,
+  SavedSetList,
+  Song,
+  SyncResult,
+} from "./admin/types";
 import { matchesSearch } from "./admin/gigs";
 import {
   buildRevenueSummary,
@@ -20,6 +27,21 @@ import {
   deleteGig as deleteGigApi,
   runCalendarSync as runCalendarSyncApi,
 } from "./admin/services/gigs";
+import {
+  deleteSong as deleteSongApi,
+  fetchSongs as fetchSongsFromApi,
+  saveSong as saveSongApi,
+} from "./admin/services/songs";
+import {
+  deleteSetList as deleteSetListApi,
+  fetchSetLists as fetchSetListsFromApi,
+  saveSetList as saveSetListApi,
+} from "./admin/services/setlists";
+import {
+  buildSongFormData,
+  isValidDuration,
+  normalizeDurationValue,
+} from "./admin/songs";
 import AdminMenuBar from "./admin/components/AdminMenuBar";
 import AdminHeader from "./admin/components/AdminHeader";
 import GigsListSection from "./admin/components/GigsListSection";
@@ -29,14 +51,25 @@ import PayslipsSection from "./admin/components/PayslipsSection";
 import ToolsSection from "./admin/components/ToolsSection";
 import GigModal from "./admin/components/GigModal";
 import GigDetailsModal from "./admin/components/GigDetailsModal";
+import SetListBuilderSection from "./admin/components/SetListBuilderSection";
+import SongModal from "./admin/components/SongModal";
+import SongDetailsModal from "./admin/components/SongDetailsModal";
 
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
   const [loading, setLoading] = useState(true);
+  const [songsLoading, setSongsLoading] = useState(true);
+  const [savedSetListsLoading, setSavedSetListsLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isSongModalOpen, setIsSongModalOpen] = useState(false);
+  const [isSongDetailsModalOpen, setIsSongDetailsModalOpen] = useState(false);
   const [currentGig, setCurrentGig] = useState<Gig | null>(null);
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
+  const [currentSong, setCurrentSong] = useState<Song | null>(null);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [formData, setFormData] = useState<Gig>({
     venue: "",
     date: "",
@@ -52,11 +85,25 @@ export default function Admin() {
     postersNeeded: false,
     internalNotes: "",
   });
+  const [songFormData, setSongFormData] = useState<Song>(buildSongFormData());
   const [venueSuggestions, setVenueSuggestions] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [songSaving, setSongSaving] = useState(false);
+  const [setListSaving, setSetListSaving] = useState(false);
 
   // Always include Google Calendar events
-  const [gcalEvents, setGcalEvents] = useState<Array<any>>([]);
+  const [googleFeed, setGoogleFeed] = useState<GoogleCalendarFeed>({
+    items: [],
+    diagnostics: {
+      serviceAccountEmail: null,
+      credentialsConfigured: null,
+      timeMin: null,
+      timeMax: null,
+      sources: [],
+      dedupedCount: 0,
+      fetchError: null,
+    },
+  });
 
   // Search state
   const [search, setSearch] = useState("");
@@ -80,12 +127,34 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  useEffect(() => {
+    fetchSetLists();
+  }, []);
+
+  useEffect(() => {
     (async () => {
       try {
         const data = await fetchGoogleEvents();
-        setGcalEvents(data);
-      } catch {
-        setGcalEvents([]);
+        setGoogleFeed(data);
+      } catch (error) {
+        setGoogleFeed({
+          items: [],
+          diagnostics: {
+            serviceAccountEmail: null,
+            credentialsConfigured: null,
+            timeMin: null,
+            timeMax: null,
+            sources: [],
+            dedupedCount: 0,
+            fetchError:
+              error instanceof Error
+                ? error.message
+                : "Unknown error loading /api/google-events",
+          },
+        });
       }
     })();
   }, []);
@@ -100,6 +169,32 @@ export default function Admin() {
       setGigs([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchSongs() {
+    setSongsLoading(true);
+    try {
+      const data = await fetchSongsFromApi();
+      setSongs(data);
+    } catch (error) {
+      console.error(error);
+      setSongs([]);
+    } finally {
+      setSongsLoading(false);
+    }
+  }
+
+  async function fetchSetLists() {
+    setSavedSetListsLoading(true);
+    try {
+      const data = await fetchSetListsFromApi();
+      setSavedSetLists(data);
+    } catch (error) {
+      console.error(error);
+      setSavedSetLists([]);
+    } finally {
+      setSavedSetListsLoading(false);
     }
   }
 
@@ -173,6 +268,40 @@ export default function Admin() {
     }
   }
 
+  function openSongModal(song: Song | null = null) {
+    const editableSong = song?._id ? song : null;
+    setCurrentSong(editableSong);
+    setSongFormData(buildSongFormData(song));
+    setSongSaving(false);
+    setIsSongModalOpen(true);
+  }
+
+  function closeSongModal() {
+    setIsSongModalOpen(false);
+    setCurrentSong(null);
+    setSongSaving(false);
+  }
+
+  function openSongDetailsModal(song: Song) {
+    setSelectedSong(song);
+    setIsSongDetailsModalOpen(true);
+  }
+
+  function handleSongModalOpenChange(open: boolean) {
+    if (!open) {
+      closeSongModal();
+      return;
+    }
+    setIsSongModalOpen(true);
+  }
+
+  function handleSongDetailsOpenChange(open: boolean) {
+    setIsSongDetailsModalOpen(open);
+    if (!open) {
+      setSelectedSong(null);
+    }
+  }
+
   function handleChange(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
@@ -206,6 +335,19 @@ export default function Admin() {
       }
       return updatedData as Gig;
     });
+  }
+
+  function handleSongChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const { name, value, type } = e.target;
+    setSongFormData((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? (e.target as HTMLInputElement).checked
+          : name === "duration"
+            ? normalizeDurationValue(value)
+            : value,
+    }));
   }
 
   function handleVenueSuggestionClick(venue: string) {
@@ -267,6 +409,81 @@ export default function Admin() {
     }
   }
 
+  async function handleSaveSong(e: FormEvent) {
+    e.preventDefault();
+
+    if (!songFormData.title.trim()) {
+      alert("Please enter a title.");
+      return;
+    }
+
+    if (!isValidDuration(songFormData.duration)) {
+      alert("Please enter a duration in m:ss or h:mm:ss format.");
+      return;
+    }
+
+    setSongSaving(true);
+
+    try {
+      const savedSong = await saveSongApi(
+        {
+          ...songFormData,
+          duration: normalizeDurationValue(songFormData.duration),
+        },
+        currentSong
+      );
+      await fetchSongs();
+      if (selectedSong?._id && savedSong?._id === selectedSong._id) {
+        setSelectedSong(savedSong);
+      }
+      closeSongModal();
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : "An error occurred during the request.";
+      alert(`Failed to save song: ${message}`);
+    } finally {
+      setSongSaving(false);
+    }
+  }
+
+  async function handleDeleteSong() {
+    if (!currentSong?._id) return;
+    if (!confirm(`Are you sure you want to delete "${currentSong.title}"?`)) return;
+
+    try {
+      await deleteSongApi(currentSong._id);
+      await fetchSongs();
+      setSelectedSong((prev) => (prev?._id === currentSong._id ? null : prev));
+      closeSongModal();
+      setIsSongDetailsModalOpen(false);
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : "An error occurred during the request.";
+      alert(`Failed to delete song: ${message}`);
+    }
+  }
+
+  async function handleSaveSetList(
+    payload: SavedSetList,
+    currentSetListId?: string | null
+  ) {
+    setSetListSaving(true);
+    try {
+      const savedSetList = await saveSetListApi(payload, currentSetListId);
+      await fetchSetLists();
+      return savedSetList;
+    } finally {
+      setSetListSaving(false);
+    }
+  }
+
+  async function handleDeleteSetList(setListId: string) {
+    await deleteSetListApi(setListId);
+    await fetchSetLists();
+  }
+
   function openCreateAt(dateISO: string, startTimeHHmm?: string) {
     setFormData({
       venue: "",
@@ -293,6 +510,11 @@ export default function Admin() {
     openEditModal(gig);
   }
 
+  function handleEditSongFromDetails(song: Song) {
+    setIsSongDetailsModalOpen(false);
+    openSongModal(song);
+  }
+
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
   const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
   const filteredGigs = showHistoricGigs ? gigs : futureOnly;
@@ -317,7 +539,9 @@ export default function Admin() {
   const isGigsSection =
     activeSection === "gigs-list" || activeSection === "gigs-calendar";
   const pageTitle =
-    activeSection === "gigs-list"
+    activeSection === "set-list-builder"
+      ? "Set List Builder"
+      : activeSection === "gigs-list"
       ? "Gig Listings"
       : activeSection === "gigs-calendar"
         ? "Calendar"
@@ -382,7 +606,9 @@ export default function Admin() {
         <AdminHeader
           pageTitle={pageTitle}
           description={
-            isGigsSection
+            activeSection === "set-list-builder"
+              ? "Build the live show flow, keep the song catalogue current, and track each set length."
+              : isGigsSection
               ? "View and manage gigs."
               : activeSection === "payments-revenue"
                 ? "Track income trends and compare across time periods."
@@ -390,10 +616,33 @@ export default function Admin() {
                   ? "Generate payslips by band member and month."
                 : "This section is ready for future updates."
           }
-          showAddGig={isGigsSection}
-          onAddGig={() => openEditModal()}
+          actionLabel={
+            isGigsSection
+                ? "Add Gig"
+                : undefined
+          }
+          onAction={
+            isGigsSection
+                ? () => openEditModal()
+                : undefined
+          }
         />
       </div>
+
+      {activeSection === "set-list-builder" && (
+        <SetListBuilderSection
+          songs={songs}
+          loading={songsLoading}
+          savedSetLists={savedSetLists}
+          savedSetListsLoading={savedSetListsLoading}
+          setListSaving={setListSaving}
+          onCreateSong={() => openSongModal()}
+          onSelectSong={openSongDetailsModal}
+          onEditSong={openSongModal}
+          onSaveSetList={handleSaveSetList}
+          onDeleteSetList={handleDeleteSetList}
+        />
+      )}
 
       {activeSection === "gigs-list" && (
         <GigsListSection
@@ -410,7 +659,7 @@ export default function Admin() {
         <GigsCalendarSection
           loading={loading}
           gigs={displayedGigs}
-          extraEvents={gcalEvents}
+          googleFeed={googleFeed}
           onEventClick={openDetailsModal}
           onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
         />
@@ -471,6 +720,24 @@ export default function Admin() {
         onTogglePosters={(checked) =>
           setFormData((prev) => ({ ...prev, postersNeeded: checked }))
         }
+      />
+
+      <SongDetailsModal
+        isOpen={isSongDetailsModalOpen}
+        onOpenChange={handleSongDetailsOpenChange}
+        song={selectedSong}
+        onEdit={handleEditSongFromDetails}
+      />
+
+      <SongModal
+        isOpen={isSongModalOpen}
+        onOpenChange={handleSongModalOpenChange}
+        saving={songSaving}
+        currentSong={currentSong}
+        formData={songFormData}
+        onChange={handleSongChange}
+        onSave={handleSaveSong}
+        onDelete={handleDeleteSong}
       />
     </div>
   );
