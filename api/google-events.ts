@@ -10,6 +10,13 @@ type CalendarFeedEvent = {
   allDay?: boolean;
 };
 
+type CalendarSourceStatus = {
+  calendarId: string;
+  ok: boolean;
+  eventCount: number;
+  error?: string;
+};
+
 function getCalendarClient() {
   const raw = process.env.GOOGLE_CREDENTIALS;
   if (!raw) return null;
@@ -26,12 +33,30 @@ function getCalendarClient() {
     key: creds.private_key,
     scopes: ["https://www.googleapis.com/auth/calendar.readonly"],
   });
-  return google.calendar({ version: "v3", auth });
+  return {
+    client: google.calendar({ version: "v3", auth }),
+    serviceAccountEmail: creds.client_email as string | undefined,
+  };
 }
 
 export default async function handler(req: any, res: any) {
-  const calendar = getCalendarClient();
-  if (!calendar) return res.status(200).json([]);
+  const calendarClient = getCalendarClient();
+  if (!calendarClient) {
+    return res.status(200).json({
+      items: [],
+      diagnostics: {
+        serviceAccountEmail: null,
+        credentialsConfigured: false,
+        timeMin: null,
+        timeMax: null,
+        sources: [],
+        dedupedCount: 0,
+        fetchError: "GOOGLE_CREDENTIALS missing in API runtime",
+      },
+    });
+  }
+
+  const { client: calendar, serviceAccountEmail } = calendarClient;
 
   const calendarIds = Array.from(
     new Set([
@@ -55,6 +80,7 @@ export default async function handler(req: any, res: any) {
     ].join("|");
 
   try {
+    const sourceStatuses: CalendarSourceStatus[] = [];
     const results = await Promise.allSettled(
       calendarIds.map((calendarId) =>
         calendar.events.list({
@@ -70,9 +96,27 @@ export default async function handler(req: any, res: any) {
 
     const deduped = new Map<string, CalendarFeedEvent>();
 
-    results.forEach((result) => {
+    results.forEach((result, index) => {
+      const calendarId = calendarIds[index];
+
       if (result.status !== "fulfilled") {
-        console.error("google-events calendar fetch failed", result.reason);
+        const errorMessage =
+          result.reason instanceof Error
+            ? result.reason.message
+            : typeof result.reason === "string"
+              ? result.reason
+              : "Unknown Google Calendar error";
+
+        console.error("google-events calendar fetch failed", {
+          calendarId,
+          error: errorMessage,
+        });
+        sourceStatuses.push({
+          calendarId,
+          ok: false,
+          eventCount: 0,
+          error: errorMessage,
+        });
         return;
       }
 
@@ -99,6 +143,12 @@ export default async function handler(req: any, res: any) {
         })
         .filter(Boolean) as CalendarFeedEvent[];
 
+      sourceStatuses.push({
+        calendarId,
+        ok: true,
+        eventCount: items.length,
+      });
+
       items.forEach((item) => {
         const key = toDedupKey(item);
         if (!deduped.has(key)) {
@@ -107,11 +157,42 @@ export default async function handler(req: any, res: any) {
       });
     });
 
-    res.status(200).json(
-      Array.from(deduped.values()).sort((a, b) => a.startISO.localeCompare(b.startISO))
+    const dedupedItems = Array.from(deduped.values()).sort((a, b) =>
+      a.startISO.localeCompare(b.startISO)
     );
+
+    res.status(200).json({
+      items: dedupedItems,
+      diagnostics: {
+        serviceAccountEmail: serviceAccountEmail ?? null,
+        credentialsConfigured: true,
+        timeMin: tMin,
+        timeMax: tMax,
+        sources: sourceStatuses,
+        dedupedCount: dedupedItems.length,
+        fetchError: null,
+      },
+    });
   } catch (err) {
     console.error("google-events error", err);
-    res.status(200).json([]); // fail-soft
+    res.status(200).json({
+      items: [],
+      diagnostics: {
+        serviceAccountEmail: serviceAccountEmail ?? null,
+        credentialsConfigured: true,
+        timeMin: tMin,
+        timeMax: tMax,
+        sources: calendarIds.map((calendarId) => ({
+          calendarId,
+          ok: false,
+          eventCount: 0,
+          error:
+            err instanceof Error ? err.message : "Unknown Google Calendar error",
+        })),
+        dedupedCount: 0,
+        fetchError:
+          err instanceof Error ? err.message : "Unknown Google Calendar error",
+      },
+    }); // fail-soft
   }
 }

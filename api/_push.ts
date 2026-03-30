@@ -42,7 +42,17 @@ function getVapidPrivateKey() {
 }
 
 function getVapidSubject() {
-  return process.env.VAPID_SUBJECT ?? "mailto:admin@soundwalk.local";
+  const raw = process.env.VAPID_SUBJECT?.trim();
+  if (!raw) {
+    return "mailto:admin@soundwalk.local";
+  }
+  if (raw.startsWith("mailto:") || raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
+  }
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) {
+    return `mailto:${raw}`;
+  }
+  return raw;
 }
 
 async function getDb() {
@@ -74,13 +84,22 @@ function ensureVapidConfigured() {
 
   const publicKey = getVapidPublicKey();
   const privateKey = getVapidPrivateKey();
+  const subject = getVapidSubject();
 
   if (!publicKey || !privateKey) {
     console.warn("Push notifications disabled: missing VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY");
     return false;
   }
 
-  webpush.setVapidDetails(getVapidSubject(), publicKey, privateKey);
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+  } catch (error) {
+    console.error(
+      `Push notifications disabled: invalid VAPID_SUBJECT "${subject}". Use "mailto:you@example.com" or an https URL.`,
+      error
+    );
+    return false;
+  }
   vapidConfigured = true;
   return true;
 }

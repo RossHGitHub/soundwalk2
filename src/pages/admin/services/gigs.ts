@@ -1,4 +1,4 @@
-import type { Gig, SyncResult } from "../types";
+import type { Gig, GoogleCalendarFeed, SyncResult } from "../types";
 
 export async function fetchGigs(): Promise<Gig[]> {
   const res = await fetch("/api/gigs");
@@ -13,12 +13,29 @@ export async function fetchGigs(): Promise<Gig[]> {
   }));
 }
 
-export async function fetchGoogleEvents(): Promise<any[]> {
+export async function fetchGoogleEvents(): Promise<GoogleCalendarFeed> {
   const res = await fetch("/api/google-events");
   if (!res.ok) {
     throw new Error(`Failed to fetch Google events (${res.status})`);
   }
-  return res.json();
+  const data = await res.json();
+
+  if (Array.isArray(data)) {
+    return {
+      items: data,
+      diagnostics: {
+        serviceAccountEmail: null,
+        credentialsConfigured: null,
+        timeMin: null,
+        timeMax: null,
+        sources: [],
+        dedupedCount: data.length,
+        fetchError: null,
+      },
+    };
+  }
+
+  return data;
 }
 
 export async function saveGig(formData: Gig, currentGig?: Gig | null) {
