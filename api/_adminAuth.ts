@@ -31,5 +31,12 @@ export function requireAdmin(req: any) {
   }
 
   const secret = requireEnv("JWT_SECRET");
-  return jwt.verify(token, secret) as JwtPayload;
+  try {
+    return jwt.verify(token, secret) as JwtPayload;
+  } catch (cause) {
+    const error = new Error("Admin token expired or invalid. Please log in again.");
+    (error as Error & { status?: number; cause?: unknown }).status = 401;
+    (error as Error & { status?: number; cause?: unknown }).cause = cause;
+    throw error;
+  }
 }
