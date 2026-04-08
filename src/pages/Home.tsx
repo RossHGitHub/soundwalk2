@@ -2,14 +2,7 @@ import { Card } from "../components/ui/card"
 import { Avatar } from "../components/ui/avatar"
 import type { ReactNode } from "react"
 import promoVideo from "../assets/vid/soundwalkPromo.mp4"
-import RossProfile from "../assets/img/RossProfile.jpg"
-import KeithProfile from "../assets/img/KeithProfile.jpg"
-import BarryProfile from "../assets/img/BarryProfile.jpg"
-
-// 👇 Add hero images for the staggered sections (replace with your real files)
-import musicalStyleImg from "../assets/img/SoundwalkAtOktoberfest.jpeg"
-import silentStageImg from "../assets/img/soundwalkStack2.jpeg"
-import proSoundImg from "../assets/img/soundwalkStack3.jpeg"
+import { useSiteMedia } from "../site/SiteMediaProvider"
 
 function FeatureRow({
   title,
@@ -18,7 +11,7 @@ function FeatureRow({
   children,
 }: {
   title: string
-  image: string
+  image: string | null
   reverse?: boolean
   children: ReactNode
 }) {
@@ -32,11 +25,15 @@ function FeatureRow({
       >
         {/* Image */}
         <div className="relative h-48 sm:h-72 md:h-auto">
-          <img
-            src={image}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          {image ? (
+            <img
+              src={image}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.22),_transparent_45%),linear-gradient(180deg,#0f172a_0%,#020617_100%)]" />
+          )}
         </div>
         {/* Text */}
         <div className="p-6 sm:p-8 flex flex-col justify-center">
@@ -49,6 +46,15 @@ function FeatureRow({
 }
 
 export default function HomePage() {
+  const { getSlot } = useSiteMedia()
+
+  const musicalStyleImg = getSlot("home.feature.musical-style")?.imageUrl ?? null
+  const silentStageImg = getSlot("home.feature.silent-stage")?.imageUrl ?? null
+  const proSoundImg = getSlot("home.feature.pro-sound")?.imageUrl ?? null
+  const rossProfile = getSlot("home.band.ross")?.imageUrl ?? null
+  const keithProfile = getSlot("home.band.keith")?.imageUrl ?? null
+  const barryProfile = getSlot("home.band.barry")?.imageUrl ?? null
+
   return (
     <main className="flex flex-col min-h-screen bg-background text-foreground">
       {/* Hero Section */}
@@ -161,28 +167,34 @@ export default function HomePage() {
             {
               name: "Ross",
               role: "Guitarist, Vocalist and by far the best member of the band.",
-              img: RossProfile,
+              img: rossProfile,
               alt: "Ross profile picture",
               extra: "(also the builder of this site, I can say what I want.)",
             },
             {
               name: "Keith",
               role: "Bassist, Vocalist and professional bald guy. Don't even challenge him, you'll lose.",
-              img: KeithProfile,
+              img: keithProfile,
               alt: "Keith profile picture",
               extra: null,
             },
             {
               name: "Barry",
               role: "Our amazing drummer with over 30 years of joint pain, and professional drumming experience.",
-              img: BarryProfile,
+              img: barryProfile,
               alt: "Barry profile picture",
               extra: null,
             },
           ].map(({ name, role, img, alt, extra }) => (
             <Card key={name} className="text-center p-6 border-1 border-emerald-600">
               <Avatar className="w-48 h-48 mx-auto">
-                <img src={img} alt={alt} className="rounded block object-cover w-full" />
+                {img ? (
+                  <img src={img} alt={alt} className="rounded block object-cover w-full h-full" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center rounded bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.24),_transparent_45%),linear-gradient(180deg,#111827_0%,#030712_100%)] text-lg font-semibold text-white/65">
+                    {name}
+                  </div>
+                )}
               </Avatar>
               <h3 className="mt-4 text-xl font-semibold">{name}</h3>
               <p>{role}</p>

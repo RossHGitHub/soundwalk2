@@ -9,9 +9,13 @@ import { Label } from "../components/ui/label";
 
 import type {
   AdminSection,
+  FacebookAutoPostRunResult,
   Gig,
   GoogleCalendarFeed,
+  MediaItem,
+  MediaSyncResult,
   SavedSetList,
+  SiteMediaSlot,
   Song,
   SyncResult,
 } from "./admin/types";
@@ -32,6 +36,15 @@ import {
   fetchSongs as fetchSongsFromApi,
   saveSong as saveSongApi,
 } from "./admin/services/songs";
+import {
+  fetchMedia as fetchMediaFromApi,
+  syncMediaBucket as syncMediaBucketApi,
+} from "./admin/services/media";
+import { runFacebookAutoPost as runFacebookAutoPostApi } from "./admin/services/facebookAutoPost";
+import {
+  fetchSiteMediaSlots as fetchSiteMediaSlotsFromApi,
+  saveSiteMediaSlot as saveSiteMediaSlotApi,
+} from "./admin/services/siteMedia";
 import {
   deleteSetList as deleteSetListApi,
   fetchSetLists as fetchSetListsFromApi,
@@ -54,14 +67,19 @@ import GigDetailsModal from "./admin/components/GigDetailsModal";
 import SetListBuilderSection from "./admin/components/SetListBuilderSection";
 import SongModal from "./admin/components/SongModal";
 import SongDetailsModal from "./admin/components/SongDetailsModal";
+import SiteImagesSection from "./admin/components/SiteImagesSection";
 
 export default function Admin() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [siteMediaSlots, setSiteMediaSlots] = useState<SiteMediaSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [songsLoading, setSongsLoading] = useState(true);
   const [savedSetListsLoading, setSavedSetListsLoading] = useState(true);
+  const [mediaLoading, setMediaLoading] = useState(true);
+  const [siteMediaLoading, setSiteMediaLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isSongModalOpen, setIsSongModalOpen] = useState(false);
@@ -90,6 +108,14 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [songSaving, setSongSaving] = useState(false);
   const [setListSaving, setSetListSaving] = useState(false);
+  const [mediaSyncing, setMediaSyncing] = useState(false);
+  const [mediaSyncResult, setMediaSyncResult] = useState<MediaSyncResult | null>(null);
+  const [mediaSyncError, setMediaSyncError] = useState<string | null>(null);
+  const [siteMediaSavingKey, setSiteMediaSavingKey] = useState<string | null>(null);
+  const [facebookPosting, setFacebookPosting] = useState(false);
+  const [facebookPostResult, setFacebookPostResult] =
+    useState<FacebookAutoPostRunResult | null>(null);
+  const [facebookPostError, setFacebookPostError] = useState<string | null>(null);
 
   // Always include Google Calendar events
   const [googleFeed, setGoogleFeed] = useState<GoogleCalendarFeed>({
@@ -132,6 +158,14 @@ export default function Admin() {
 
   useEffect(() => {
     fetchSetLists();
+  }, []);
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  useEffect(() => {
+    fetchSiteMediaSlots();
   }, []);
 
   useEffect(() => {
@@ -195,6 +229,32 @@ export default function Admin() {
       setSavedSetLists([]);
     } finally {
       setSavedSetListsLoading(false);
+    }
+  }
+
+  async function fetchMedia() {
+    setMediaLoading(true);
+    try {
+      const data = await fetchMediaFromApi();
+      setMediaItems(data);
+    } catch (error) {
+      console.error(error);
+      setMediaItems([]);
+    } finally {
+      setMediaLoading(false);
+    }
+  }
+
+  async function fetchSiteMediaSlots() {
+    setSiteMediaLoading(true);
+    try {
+      const data = await fetchSiteMediaSlotsFromApi();
+      setSiteMediaSlots(data);
+    } catch (error) {
+      console.error(error);
+      setSiteMediaSlots([]);
+    } finally {
+      setSiteMediaLoading(false);
     }
   }
 
@@ -536,11 +596,59 @@ export default function Admin() {
     }
   }
 
+  async function runMediaSync() {
+    setMediaSyncing(true);
+    setMediaSyncError(null);
+    setMediaSyncResult(null);
+
+    try {
+      const result = await syncMediaBucketApi();
+      setMediaSyncResult(result);
+      await fetchMedia();
+      await fetchSiteMediaSlots();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error running media sync";
+      setMediaSyncError(message);
+    } finally {
+      setMediaSyncing(false);
+    }
+  }
+
+  async function handleSaveSiteMediaSlot(key: string, mediaId: string | null) {
+    setSiteMediaSavingKey(key);
+    try {
+      await saveSiteMediaSlotApi(key, mediaId);
+      await fetchSiteMediaSlots();
+    } finally {
+      setSiteMediaSavingKey(null);
+    }
+  }
+
+  async function runFacebookAutoPost() {
+    setFacebookPosting(true);
+    setFacebookPostError(null);
+    setFacebookPostResult(null);
+
+    try {
+      const result = await runFacebookAutoPostApi();
+      setFacebookPostResult(result);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown error running Facebook auto-post";
+      setFacebookPostError(message);
+    } finally {
+      setFacebookPosting(false);
+    }
+  }
+
   const isGigsSection =
     activeSection === "gigs-list" || activeSection === "gigs-calendar";
   const pageTitle =
     activeSection === "set-list-builder"
       ? "Set List Builder"
+      : activeSection === "site-images"
+        ? "Site Images"
       : activeSection === "gigs-list"
       ? "Gig Listings"
       : activeSection === "gigs-calendar"
@@ -608,6 +716,8 @@ export default function Admin() {
           description={
             activeSection === "set-list-builder"
               ? "Build the live show flow, keep the song catalogue current, and track each set length."
+              : activeSection === "site-images"
+                ? "Assign gallery images to the public site without touching code."
               : isGigsSection
               ? "View and manage gigs."
               : activeSection === "payments-revenue"
@@ -641,6 +751,17 @@ export default function Admin() {
           onEditSong={openSongModal}
           onSaveSetList={handleSaveSetList}
           onDeleteSetList={handleDeleteSetList}
+        />
+      )}
+
+      {activeSection === "site-images" && (
+        <SiteImagesSection
+          slots={siteMediaSlots}
+          slotsLoading={siteMediaLoading}
+          mediaItems={mediaItems}
+          mediaLoading={mediaLoading}
+          savingKey={siteMediaSavingKey}
+          onAssign={handleSaveSiteMediaSlot}
         />
       )}
 
@@ -693,6 +814,16 @@ export default function Admin() {
           syncError={syncError}
           syncResult={syncResult}
           onRunCalendarSync={runCalendarSync}
+          mediaItems={mediaItems}
+          mediaLoading={mediaLoading}
+          mediaSyncing={mediaSyncing}
+          mediaSyncError={mediaSyncError}
+          mediaSyncResult={mediaSyncResult}
+          onRunMediaSync={runMediaSync}
+          facebookPosting={facebookPosting}
+          facebookPostResult={facebookPostResult}
+          facebookPostError={facebookPostError}
+          onRunFacebookAutoPost={runFacebookAutoPost}
         />
       )}
 

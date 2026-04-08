@@ -24,9 +24,10 @@ export default function AdminMenuBar({
   const menuItems: Array<{ label: string; key: AdminSection }> = [
     { label: "Gig Listings", key: "gigs-list" },
     { label: "Calendar", key: "gigs-calendar" },
-    { label: "Revenue Rundown", key: "payments-revenue" },
-    { label: "Payslips", key: "payments-payslips" },
     { label: "Set List Builder", key: "set-list-builder" },
+    { label: "Revenue", key: "payments-revenue" },
+    { label: "Payslips", key: "payments-payslips" },
+    { label: "Site Images", key: "site-images" },
     { label: "Tools", key: "tools" },
   ];
 
@@ -108,6 +109,15 @@ export default function AdminMenuBar({
                       onClick={() => onSectionChange("set-list-builder")}
                     >
                       Set List Builder
+                    </Button>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Button
+                      variant={activeSection === "site-images" ? "default" : "outline"}
+                      className="w-full justify-start"
+                      onClick={() => onSectionChange("site-images")}
+                    >
+                      Site Images
                     </Button>
                   </SheetClose>
                 </div>

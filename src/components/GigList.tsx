@@ -5,8 +5,8 @@ import {
   Dialog,
   DialogContent,
 } from "../components/ui/dialog"
-import soundwalk_stack from "../assets/img/soundwalk_stack2.jpeg";
 import { formatDate } from "../lib/date";
+import { useSiteMedia } from "../site/SiteMediaProvider";
 type Gig = {
   _id?: string;
   venue: string;
@@ -26,6 +26,8 @@ type GigListProps = {
 };
 export function GigList({ data }: GigListProps) {
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
+  const { getSlot } = useSiteMedia();
+  const dialogImage = getSlot("gigs.dialog")?.imageUrl ?? null;
   return (
     <>
       {Object.entries(data).map(([year, months]) => (
@@ -58,11 +60,17 @@ export function GigList({ data }: GigListProps) {
       <div className="flex flex-col lg:flex-row h-full">
         {/* Map: Left on desktop, top on mobile */}
         <div className="lg:w-1/2 w-full h-64 lg:h-auto rounded-l-lg overflow-hidden bg-gray-300 flex items-center justify-center text-muted-foreground">
-         <img
-            src={soundwalk_stack}
-            alt="Soundwalk Stack"
-            className="object-cover w-full h-full"
-          />
+         {dialogImage ? (
+           <img
+              src={dialogImage}
+              alt="Soundwalk live image"
+              className="object-cover w-full h-full"
+            />
+         ) : (
+           <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.24),_transparent_45%),linear-gradient(180deg,#111827_0%,#030712_100%)] text-sm uppercase tracking-[0.28em] text-white/55">
+             Soundwalk
+           </div>
+         )}
          {/* <div className="text-center p-4">
             <div className="text-xl font-semibold mb-2">{selectedGig.venue}</div>
             <div className="mb-2">Date: {formatDate(selectedGig.date)}</div>

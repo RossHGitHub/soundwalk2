@@ -2,8 +2,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { GigList } from "../components/GigList";
-import soundwalkSheepfolds from "../assets/img/soundwalkSheepfolds.jpeg";
 import Hero from "../components/Hero";
+import { useSiteMedia } from "../site/SiteMediaProvider";
 type Gig = {
   _id?: string;
   venue: string;
@@ -38,6 +38,7 @@ function groupGigsByYearAndMonth(gigs: Gig[]) {
 export default function Gigs() {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getSlot } = useSiteMedia();
   useEffect(() => {
     async function fetchGigs() {
       setLoading(true);
@@ -60,10 +61,11 @@ export default function Gigs() {
     fetchGigs();
   }, []);
   const gigsData = groupGigsByYearAndMonth(gigs);
+  const heroImage = getSlot("gigs.hero")?.imageUrl ?? null;
   return (
       <main className="min-h-screen bg-background text-foreground p-8 max-w-7xl mx-auto">
       <Hero
-        image={soundwalkSheepfolds}
+        image={heroImage}
         title="Upcoming Shows"
       />
       {loading ? (

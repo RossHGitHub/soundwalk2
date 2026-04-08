@@ -27,6 +27,57 @@ export type Song = {
   updatedAt?: string;
 };
 
+export type MediaItem = {
+  _id?: string;
+  title: string;
+  altText: string;
+  contentType: string;
+  size?: number;
+  sortOrder: number;
+  active: boolean;
+  assetUrl: string;
+  sourceLastModified?: string | null;
+  syncedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type SiteMediaSlot = {
+  key: string;
+  label: string;
+  description: string;
+  mediaId: string | null;
+  imageUrl: string | null;
+  media: MediaItem | null;
+  updatedAt?: string | null;
+};
+
+export type MediaSyncResult = {
+  syncedCount: number;
+  insertedCount: number;
+  updatedCount: number;
+  deactivatedCount: number;
+};
+
+export type FacebookAutoPostRunItem = {
+  gigId: string;
+  venue: string;
+  gigDateKey: string;
+  action: "posted" | "skipped" | "error";
+  reason?: string;
+  facebookPostId?: string | null;
+  mediaTitle?: string | null;
+};
+
+export type FacebookAutoPostRunResult = {
+  nowISO: string;
+  dueCount: number;
+  postedCount: number;
+  skippedCount: number;
+  errorCount: number;
+  items: FacebookAutoPostRunItem[];
+};
+
 export type SetListEntry = {
   id: string;
   songId: string;
@@ -85,6 +136,7 @@ export type SyncResult = {
 
 export type AdminSection =
   | "set-list-builder"
+  | "site-images"
   | "gigs-list"
   | "gigs-calendar"
   | "payments-revenue"

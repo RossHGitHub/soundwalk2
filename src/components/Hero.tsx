@@ -1,6 +1,6 @@
 // components/Hero.tsx
 interface HeroProps {
-  image: string;
+  image?: string | null;
   title?: string | React.ReactNode;
   fullBleed?: boolean; // ← NEW
 }
@@ -24,14 +24,26 @@ export default function Hero({ image, title, fullBleed }: HeroProps) {
 
       {/* Mobile: slightly taller + full width */}
       <div className="block md:hidden h-[240px] w-full overflow-hidden border-t-2 border-b-2 border-t-emerald-600 border-b-emerald-600 mb-4 rounded-none">
-        <img src={image} alt={typeof title === "string" ? title : "Hero image"}
-             className="w-full h-full object-cover object-center" draggable={false}/>
+        {image ? (
+          <img src={image} alt={typeof title === "string" ? title : "Hero image"}
+               className="w-full h-full object-cover object-center" draggable={false}/>
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.24),_transparent_45%),linear-gradient(180deg,#111827_0%,#030712_100%)] text-sm uppercase tracking-[0.28em] text-white/55">
+            Soundwalk
+          </div>
+        )}
       </div>
 
       {/* Desktop: your original */}
       <div className="hidden md:block h-[250px] overflow-hidden border-2 rounded-2xl border-emerald-600">
-        <img src={image} alt={typeof title === "string" ? title : "Hero image"}
-             className="w-full h-full object-cover object-center"/>
+        {image ? (
+          <img src={image} alt={typeof title === "string" ? title : "Hero image"}
+               className="w-full h-full object-cover object-center"/>
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.24),_transparent_45%),linear-gradient(180deg,#111827_0%,#030712_100%)] text-base uppercase tracking-[0.28em] text-white/55">
+            Soundwalk
+          </div>
+        )}
       </div>
     </header>
   );

@@ -6,13 +6,28 @@ import {
   subscribeToPush,
 } from "../../../push/pushClient";
 import { usePwa } from "../../../pwa/PwaProvider";
-import type { SyncResult } from "../types";
+import type {
+  FacebookAutoPostRunResult,
+  MediaItem,
+  MediaSyncResult,
+  SyncResult,
+} from "../types";
 
 type Props = {
   syncing: boolean;
   syncResult: SyncResult | null;
   syncError: string | null;
   onRunCalendarSync: () => void;
+  mediaItems: MediaItem[];
+  mediaLoading: boolean;
+  mediaSyncing: boolean;
+  mediaSyncError: string | null;
+  mediaSyncResult: MediaSyncResult | null;
+  onRunMediaSync: () => void;
+  facebookPosting: boolean;
+  facebookPostResult: FacebookAutoPostRunResult | null;
+  facebookPostError: string | null;
+  onRunFacebookAutoPost: () => void;
 };
 
 export default function ToolsSection({
@@ -20,6 +35,16 @@ export default function ToolsSection({
   syncResult,
   syncError,
   onRunCalendarSync,
+  mediaItems,
+  mediaLoading,
+  mediaSyncing,
+  mediaSyncError,
+  mediaSyncResult,
+  onRunMediaSync,
+  facebookPosting,
+  facebookPostResult,
+  facebookPostError,
+  onRunFacebookAutoPost,
 }: Props) {
   const {
     installStatus,
@@ -175,6 +200,130 @@ export default function ToolsSection({
           {pushBusy ? "Enabling…" : "Enable notifications"}
         </Button>
         {pushMessage && <p className="text-sm text-white/70">{pushMessage}</p>}
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-white">Media library</h3>
+        <p className="text-sm text-white/60">
+          Sync Cloudflare bucket images into Mongo and serve them through signed URLs.
+        </p>
+      </div>
+      <div className="rounded-lg border border-white/10 bg-gray-950/50 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-white/80">
+            {mediaLoading
+              ? "Loading media records..."
+              : `${mediaItems.length} image${mediaItems.length === 1 ? "" : "s"} currently active in the gallery.`}
+          </div>
+          <Button
+            variant="outline"
+            onClick={onRunMediaSync}
+            disabled={mediaSyncing}
+            className="whitespace-nowrap"
+          >
+            {mediaSyncing ? "Syncing media…" : "Sync media bucket"}
+          </Button>
+        </div>
+        {(mediaSyncError || mediaSyncResult) && (
+          <div className="text-sm space-y-1">
+            {mediaSyncError && <p className="text-red-400">Media sync error: {mediaSyncError}</p>}
+            {mediaSyncResult && (
+              <p className="text-white/70">
+                Synced: {mediaSyncResult.syncedCount} • Inserted: {mediaSyncResult.insertedCount} • Updated:{" "}
+                {mediaSyncResult.updatedCount} • Deactivated: {mediaSyncResult.deactivatedCount}
+              </p>
+            )}
+          </div>
+        )}
+        {mediaItems.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {mediaItems.slice(0, 8).map((item) => (
+              <div
+                key={item._id}
+                className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
+              >
+                <img
+                  src={item.assetUrl}
+                  alt={item.altText || item.title}
+                  className="h-32 w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="px-3 py-2">
+                  <p className="truncate text-sm font-medium text-white">{item.title}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-white">Facebook auto-posting</h3>
+        <p className="text-sm text-white/60">
+          Starts checking from 7 days before a gig, then retries daily until it posts successfully or the gig date passes.
+        </p>
+      </div>
+      <div className="rounded-lg border border-white/10 bg-gray-950/50 p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-white/75">
+            Generates Facebook gig promo posts with the fallback-safe template and a rotated gallery image.
+          </p>
+          <Button
+            variant="outline"
+            onClick={onRunFacebookAutoPost}
+            disabled={facebookPosting}
+            className="whitespace-nowrap"
+          >
+            {facebookPosting ? "Running Facebook post check…" : "Run Facebook auto-post check"}
+          </Button>
+        </div>
+        {(facebookPostError || facebookPostResult) && (
+          <div className="space-y-2 text-sm">
+            {facebookPostError && (
+              <p className="text-red-400">Facebook auto-post error: {facebookPostError}</p>
+            )}
+            {facebookPostResult && (
+              <div className="space-y-3 text-white/75">
+                <p>
+                  Due: {facebookPostResult.dueCount} • Posted: {facebookPostResult.postedCount} •
+                  Skipped: {facebookPostResult.skippedCount} • Errors: {facebookPostResult.errorCount}
+                </p>
+                {facebookPostResult.items.length > 0 && (
+                  <div className="space-y-2">
+                    {facebookPostResult.items.map((item, index) => (
+                      <div
+                        key={`${item.gigId || "none"}-${index}`}
+                        className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-medium text-white">
+                            {item.venue || "Unknown venue"}
+                          </p>
+                          <span
+                            className={`text-xs uppercase tracking-[0.22em] ${
+                              item.action === "posted"
+                                ? "text-emerald-300"
+                                : item.action === "error"
+                                  ? "text-red-300"
+                                  : "text-white/45"
+                            }`}
+                          >
+                            {item.action}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-white/45">{item.gigDateKey || "No date"}</p>
+                        {item.reason && <p className="mt-2">{item.reason}</p>}
+                        {item.mediaTitle && (
+                          <p className="mt-1 text-xs text-white/55">Image: {item.mediaTitle}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div>

@@ -67,3 +67,52 @@ export default tseslint.config([
   },
 ])
 ```
+
+## Cloudflare R2 Media Setup
+
+The media gallery expects a private R2 bucket and these server-side environment variables:
+
+```bash
+R2_ACCOUNT_ID=""
+R2_ACCESS_KEY_ID=""
+R2_SECRET_ACCESS_KEY=""
+R2_BUCKET=""
+R2_MEDIA_PREFIX=""
+MEDIA_URL_SIGNING_SECRET=""
+```
+
+How it works:
+
+- `POST /api/media` lists image objects in the bucket and syncs them into the Mongo `media` collection.
+- `GET /api/media` returns only database-backed media records plus short-lived signed asset URLs.
+- `GET /api/media-asset` validates the signed URL and streams the object from R2 without exposing the bucket directly to the browser.
+
+Recommended Cloudflare-side settings:
+
+- Keep the bucket private. Do not enable public bucket access.
+- Use a long, unique `MEDIA_URL_SIGNING_SECRET`.
+- If your images live in a folder-like prefix inside the bucket, set `R2_MEDIA_PREFIX` such as `Website/`.
+- Enable Cloudflare Hotlink Protection on the site zone if the media is served behind your main domain.
+- If you have access to Bot Fight Mode or stronger WAF controls on your plan, enable them for `/api/media` and `/api/media-asset`.
+
+## Facebook Auto-Posting Setup
+
+The Facebook auto-post feature expects these server-side environment variables:
+
+```bash
+FACEBOOK_PAGE_ID=""
+FACEBOOK_PAGE_ACCESS_TOKEN=""
+CRON_SECRET=""
+SITE_BASE_URL=""
+```
+
+Optional:
+
+```bash
+FACEBOOK_GRAPH_VERSION="v23.0"
+```
+
+Notes:
+
+- `CRON_SECRET` is used by Vercel Cron and sent as a `Bearer` authorization header.
+- `SITE_BASE_URL` should be your public site origin, for example `https://soundwalkband.co.uk`, so Facebook can fetch signed image URLs when needed.

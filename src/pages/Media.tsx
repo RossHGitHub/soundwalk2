@@ -1,8 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
 import { Separator } from "../components/ui/separator"
 import Hero from "../components/Hero"
-import SoundwalkPromoTwo from "../assets/img/soundwalkStack2.jpeg"
+import type { MediaItem } from "./admin/types"
+import { useSiteMedia } from "../site/SiteMediaProvider"
 
 const promoVideos = [
   "https://www.youtube.com/embed/wwHEKfL651E?si=28PwT5ZpHAJwXz0u",
@@ -38,14 +39,51 @@ const liveVideos = [
 
 export default function MediaPage() {
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
+  const [galleryItems, setGalleryItems] = useState<MediaItem[]>([])
+  const [galleryLoading, setGalleryLoading] = useState(true)
+  const { getSlot } = useSiteMedia()
+  const heroImage = getSlot("media.hero")?.imageUrl ?? null
   void activeVideo
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadGallery() {
+      try {
+        const res = await fetch("/api/media")
+        if (!res.ok) {
+          throw new Error(`Failed to fetch media (${res.status})`)
+        }
+
+        const data = await res.json()
+        if (!cancelled) {
+          setGalleryItems(data)
+        }
+      } catch (error) {
+        console.error("Failed to load media gallery", error)
+        if (!cancelled) {
+          setGalleryItems([])
+        }
+      } finally {
+        if (!cancelled) {
+          setGalleryLoading(false)
+        }
+      }
+    }
+
+    loadGallery()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     
     <main className="min-h-screen px-4 py-10 bg-background text-foreground">
       <div className="max-w-5xl mx-auto space-y-10 text-center">
 
-        <Hero image={SoundwalkPromoTwo} title="Media" />
+        <Hero image={heroImage} title="Media" />
 
         <Separator />
 
@@ -117,6 +155,55 @@ export default function MediaPage() {
     ))}
   </div>
 </section>
+
+        <Separator />
+
+        <section aria-label="Photo Gallery" className="text-left space-y-6">
+          <div className="space-y-2 text-center">
+            <h2 className="text-2xl font-semibold">Photo Gallery</h2>
+           
+          </div>
+
+          {galleryLoading ? (
+            <p className="text-center text-muted-foreground">Loading gallery...</p>
+          ) : galleryItems.length === 0 ? (
+            <p className="text-center text-muted-foreground">
+              No gallery images are live yet.
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {galleryItems.map((item) => (
+                <Dialog key={item._id}>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="group overflow-hidden rounded-[24px] border border-emerald-700/40 bg-black/10 text-left shadow-[0_24px_50px_rgba(0,0,0,0.18)] transition hover:-translate-y-1 hover:border-emerald-500/60"
+                    >
+                      <div className="aspect-[4/5] overflow-hidden">
+                        <img
+                          src={item.assetUrl}
+                          alt={item.altText || item.title}
+                          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          loading="lazy"
+                        />
+                      </div>
+                      <div className="px-4 py-3">
+                        
+                      </div>
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-5xl border-0 bg-black/90 p-0 text-white">
+                    <img
+                      src={item.assetUrl}
+                      alt={item.altText || item.title}
+                      className="max-h-[85vh] w-full object-contain"
+                    />
+                  </DialogContent>
+                </Dialog>
+              ))}
+            </div>
+          )}
+        </section>
 
       </div>
     </main>
