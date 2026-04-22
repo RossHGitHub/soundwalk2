@@ -89,9 +89,14 @@ export default function GigDetailsModal({
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ab5bf]">
                 Gig Overview
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                {gig.venue || "Untitled event"}
-              </h2>
+              <DialogPrimitive.Title asChild>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                  {gig.venue || "Untitled event"}
+                </h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description className="sr-only">
+                Review the saved details for this gig.
+              </DialogPrimitive.Description>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {statusBadges.length > 0 ? (
                   statusBadges.map(({ label, icon: Icon }) => (

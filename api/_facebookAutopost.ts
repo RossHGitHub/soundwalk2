@@ -53,7 +53,7 @@ type FacebookGraphResponse = {
 };
 
 type RunOptions = {
-  req: any;
+  req: RequestLike;
   forceGigId?: string | null;
 };
 
@@ -73,7 +73,16 @@ export type FacebookAutoPostRunResult = {
   postedCount: number;
   skippedCount: number;
   errorCount: number;
+  diagnostics: {
+    cronSecretConfigured: boolean;
+    siteBaseUrlConfigured: boolean;
+    r2PublicBaseUrlConfigured: boolean;
+  };
   items: RunItem[];
+};
+
+type RequestLike = {
+  headers?: Record<string, string | string[] | undefined>;
 };
 
 function getOrdinalSuffix(day: number) {
@@ -125,7 +134,7 @@ function buildCaption(gig: GigDoc) {
   return [dateLine, venueLine, descriptionLine, startLine].join("\n\n");
 }
 
-function getAbsoluteBaseUrl(req: any) {
+function getAbsoluteBaseUrl(req: RequestLike) {
   const configured = process.env.SITE_BASE_URL?.trim();
   if (configured) {
     return configured.replace(/\/+$/, "");
@@ -143,7 +152,7 @@ function getAbsoluteBaseUrl(req: any) {
   return `${proto}://${host}`;
 }
 
-function toAbsoluteUrl(req: any, url: string) {
+function toAbsoluteUrl(req: RequestLike, url: string) {
   if (/^https?:\/\//i.test(url)) {
     return url;
   }
@@ -264,6 +273,52 @@ async function publishFacebookPhotoPost({
   };
 }
 
+function getDiagnostics() {
+  return {
+    cronSecretConfigured: Boolean(process.env.CRON_SECRET?.trim()),
+    siteBaseUrlConfigured: Boolean(process.env.SITE_BASE_URL?.trim()),
+    r2PublicBaseUrlConfigured: Boolean(process.env.R2_PUBLIC_BASE_URL?.trim()),
+  };
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown Facebook posting error.";
+}
+
+async function validateImageUrlForFacebook(imageUrl: string) {
+  let lastFailure = "Image validation failed before posting.";
+
+  for (const method of ["HEAD", "GET"] as const) {
+    try {
+      const response = await fetch(imageUrl, {
+        method,
+        redirect: "follow",
+      });
+
+      if (!response.ok) {
+        lastFailure = `Image URL returned ${response.status} ${response.statusText || ""}`.trim();
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.toLowerCase().startsWith("image/")) {
+        lastFailure = `Image URL returned non-image content type: ${contentType || "unknown"}`;
+        continue;
+      }
+
+      if (method === "GET") {
+        await response.body?.cancel().catch(() => undefined);
+      }
+
+      return;
+    } catch (error) {
+      lastFailure = `Unable to fetch image URL: ${getErrorMessage(error)}`;
+    }
+  }
+
+  throw new Error(lastFailure);
+}
+
 async function findCandidateGigs(forceGigId?: string | null) {
   const db = await getDb();
   const gigsCollection = db.collection<GigDoc>("gigs");
@@ -332,6 +387,7 @@ export async function runFacebookAutoPostJob({
   req,
   forceGigId,
 }: RunOptions): Promise<FacebookAutoPostRunResult> {
+  const diagnostics = getDiagnostics();
   const lockAcquired = await acquireLock();
   if (!lockAcquired) {
     return {
@@ -340,6 +396,7 @@ export async function runFacebookAutoPostJob({
       postedCount: 0,
       skippedCount: 1,
       errorCount: 0,
+      diagnostics,
       items: [
         {
           gigId: "",
@@ -398,12 +455,18 @@ export async function runFacebookAutoPostJob({
       }
 
       const caption = buildCaption(gig);
-      const selectedMedia = await pickMediaForPost();
-      const imageUrl = selectedMedia
-        ? toAbsoluteUrl(req, buildMediaUrl(selectedMedia, 86400))
-        : null;
+      let selectedMedia: MediaDoc | null = null;
+      let imageUrl: string | null = null;
 
       try {
+        selectedMedia = await pickMediaForPost();
+        if (!selectedMedia) {
+          throw new Error("No active gallery image is available for Facebook auto-posting.");
+        }
+
+        imageUrl = toAbsoluteUrl(req, buildMediaUrl(selectedMedia, 86400));
+        await validateImageUrlForFacebook(imageUrl);
+
         const facebookPost = await publishFacebookPhotoPost({
           caption,
           imageUrl,
@@ -415,8 +478,8 @@ export async function runFacebookAutoPostJob({
           gigDateKey,
           venueSnapshot: venue,
           caption,
-          mediaId: selectedMedia?._id ?? null,
-          mediaTitle: selectedMedia?.title ?? null,
+          mediaId: selectedMedia._id ?? null,
+          mediaTitle: selectedMedia.title ?? null,
           imageUrl,
           status: "posted",
           facebookPostId: facebookPost.postId,
@@ -431,12 +494,10 @@ export async function runFacebookAutoPostJob({
           gigDateKey,
           action: "posted",
           facebookPostId: facebookPost.postId,
-          mediaTitle: selectedMedia?.title ?? null,
-          reason: selectedMedia ? undefined : "Posted without image fallback.",
+          mediaTitle: selectedMedia.title ?? null,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown Facebook posting error.";
+        const message = getErrorMessage(error);
 
         await historyCollection.insertOne({
           type: "gig-promo-7-day",
@@ -471,6 +532,7 @@ export async function runFacebookAutoPostJob({
       postedCount: items.filter((item) => item.action === "posted").length,
       skippedCount: items.filter((item) => item.action === "skipped").length,
       errorCount: items.filter((item) => item.action === "error").length,
+      diagnostics,
       items,
     };
   } finally {

@@ -28,7 +28,7 @@ export default function AdminMenuBar({
     { label: "Revenue", key: "payments-revenue" },
     { label: "Payslips", key: "payments-payslips" },
     { label: "Site Images", key: "site-images" },
-    { label: "Tools", key: "tools" },
+    { label: "Backend Tools", key: "tools" },
   ];
 
   return (
@@ -102,6 +102,12 @@ export default function AdminMenuBar({
                       Payslips
                     </Button>
                   </SheetClose>
+                  
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/50">
+                   Tools
+                  </div>
                   <SheetClose asChild>
                     <Button
                       variant={activeSection === "set-list-builder" ? "default" : "outline"}
@@ -120,18 +126,13 @@ export default function AdminMenuBar({
                       Site Images
                     </Button>
                   </SheetClose>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-xs uppercase tracking-[0.2em] text-white/50">
-                    Tools
-                  </div>
                   <SheetClose asChild>
                     <Button
                       variant={activeSection === "tools" ? "default" : "outline"}
                       className="w-full justify-start"
                       onClick={() => onSectionChange("tools")}
                     >
-                      Tools
+                      Backend Tools
                     </Button>
                   </SheetClose>
                 </div>

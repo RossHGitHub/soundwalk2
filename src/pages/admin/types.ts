@@ -75,6 +75,11 @@ export type FacebookAutoPostRunResult = {
   postedCount: number;
   skippedCount: number;
   errorCount: number;
+  diagnostics: {
+    cronSecretConfigured: boolean;
+    siteBaseUrlConfigured: boolean;
+    r2PublicBaseUrlConfigured: boolean;
+  };
   items: FacebookAutoPostRunItem[];
 };
 

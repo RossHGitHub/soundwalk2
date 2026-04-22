@@ -69,12 +69,16 @@ export default function SongModal({
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ab5bf]">
                 Song Library
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                {currentSong ? "Edit Song" : "Add Song"}
-              </h2>
-              <p className="mt-2 text-sm text-white/70">
-                Keep the catalogue accurate so the set totals and lyrics stay reliable.
-              </p>
+              <DialogPrimitive.Title asChild>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                  {currentSong ? "Edit Song" : "Add Song"}
+                </h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description asChild>
+                <p className="mt-2 text-sm text-white/70">
+                  Keep the catalogue accurate so the set totals and lyrics stay reliable.
+                </p>
+              </DialogPrimitive.Description>
             </div>
 
             <DialogPrimitive.Close

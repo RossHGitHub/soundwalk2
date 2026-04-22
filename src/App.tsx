@@ -7,6 +7,8 @@ import ContactPage from "./pages/Contact";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/protectedRoute";
+import AppErrorBoundary from "./components/AppErrorBoundary";
+import AppErrorProvider from "./components/AppErrorProvider";
 
 function App() {
   return (
@@ -20,7 +22,11 @@ function App() {
           path="admin"
           element={
             <ProtectedRoute>
-              <Admin />
+              <AppErrorProvider>
+                <AppErrorBoundary>
+                  <Admin />
+                </AppErrorBoundary>
+              </AppErrorProvider>
             </ProtectedRoute>
           }
         />

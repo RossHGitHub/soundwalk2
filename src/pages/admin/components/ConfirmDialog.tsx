@@ -33,8 +33,12 @@ export default function ConfirmDialog({
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-white">{title}</h2>
-                <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
+                <DialogPrimitive.Title asChild>
+                  <h2 className="text-xl font-semibold text-white">{title}</h2>
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Description asChild>
+                  <p className="mt-2 text-sm leading-6 text-white/70">{description}</p>
+                </DialogPrimitive.Description>
               </div>
             </div>
 

@@ -131,7 +131,7 @@ export default function SiteImagesSection({
                   key={item._id}
                   type="button"
                   onClick={() => handleAssign(item._id ?? null)}
-                  className="overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] text-left transition hover:-translate-y-1 hover:border-emerald-500/55"
+                  className="overflow-hidden rounded-[22px] min-h-[50vh] border border-white/10 bg-white/[0.04] text-left transition hover:-translate-y-1 hover:border-emerald-500/55"
                 >
                   <div className="aspect-[4/5] overflow-hidden bg-black/20">
                     <img

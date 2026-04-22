@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
@@ -70,6 +71,7 @@ import SongDetailsModal from "./admin/components/SongDetailsModal";
 import SiteImagesSection from "./admin/components/SiteImagesSection";
 
 export default function Admin() {
+  const navigate = useNavigate();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
@@ -589,8 +591,10 @@ export default function Admin() {
     try {
       const data = await runCalendarSyncApi();
       setSyncResult(data);
-    } catch (e: any) {
-      setSyncError(e?.message || "Unknown error running sync");
+    } catch (error) {
+      setSyncError(
+        error instanceof Error ? error.message : "Unknown error running sync"
+      );
     } finally {
       setSyncing(false);
     }
@@ -657,7 +661,7 @@ export default function Admin() {
           ? "Revenue Rundown"
           : activeSection === "payments-payslips"
             ? "Payslips"
-          : "Tools";
+          : "Backend Tools";
 
   const revenueSummary = buildRevenueSummary({
     gigs,
@@ -671,6 +675,11 @@ export default function Admin() {
     requestAnimationFrame(() => {
       menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("auth-token");
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -719,13 +728,15 @@ export default function Admin() {
               : activeSection === "site-images"
                 ? "Assign gallery images to the public site without touching code."
               : isGigsSection
-              ? "View and manage gigs."
+                ? "View and manage gigs."
               : activeSection === "payments-revenue"
                 ? "Track income trends and compare across time periods."
                 : activeSection === "payments-payslips"
                   ? "Generate payslips by band member and month."
-                : "This section is ready for future updates."
+                  : "Run backend maintenance, syncing, and publishing checks."
           }
+          secondaryActionLabel="Log Out"
+          onSecondaryAction={handleLogout}
           actionLabel={
             isGigsSection
                 ? "Add Gig"

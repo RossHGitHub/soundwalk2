@@ -59,18 +59,22 @@ export default function SongDetailsModal({
                 Song Details
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                  {song.title || "Untitled Song"}
-                </h2>
+                <DialogPrimitive.Title asChild>
+                  <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                    {song.title || "Untitled Song"}
+                  </h2>
+                </DialogPrimitive.Title>
                 {song.backingTrack && (
                   <span className="rounded-full border border-red-500/25 bg-red-500/10 px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-red-300">
                     BT
                   </span>
                 )}
               </div>
-              <p className="mt-2 text-sm text-white/70">
-                Stored in the live song catalogue for the set list builder.
-              </p>
+              <DialogPrimitive.Description asChild>
+                <p className="mt-2 text-sm text-white/70">
+                  Stored in the live song catalogue for the set list builder.
+                </p>
+              </DialogPrimitive.Description>
             </div>
 
             <div className="flex items-center gap-2">

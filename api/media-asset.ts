@@ -30,8 +30,8 @@ async function sendObjectBody(res: any, body: any) {
 
 export default async function handler(req: any, res: any) {
   try {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", ["GET"]);
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      res.setHeader("Allow", ["GET", "HEAD"]);
       return res.status(405).json({ error: "Method not allowed" });
     }
 
@@ -70,6 +70,10 @@ export default async function handler(req: any, res: any) {
 
     if (object.ETag) {
       res.setHeader("ETag", object.ETag);
+    }
+
+    if (req.method === "HEAD") {
+      return res.end();
     }
 
     await sendObjectBody(res, object.Body);

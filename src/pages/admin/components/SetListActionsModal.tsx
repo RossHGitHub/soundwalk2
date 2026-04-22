@@ -55,9 +55,14 @@ export default function SetListActionsModal({
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ab5bf]">
                 Saved Setlist
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-                {setlist.title}
-              </h2>
+              <DialogPrimitive.Title asChild>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+                  {setlist.title}
+                </h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description className="sr-only">
+                Choose an action for this saved setlist.
+              </DialogPrimitive.Description>
             </div>
 
             <DialogPrimitive.Close

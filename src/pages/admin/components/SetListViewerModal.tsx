@@ -140,12 +140,16 @@ export default function SetListViewerModal({
                 <Sparkles className="h-3.5 w-3.5" />
                 Setlist Viewer
               </div>
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                {currentSetList.title}
-              </h2>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-white/68">
-                The polished running order. Fixed, readable, and ready for the night.
-              </p>
+              <DialogPrimitive.Title asChild>
+                <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  {currentSetList.title}
+                </h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description asChild>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-white/68">
+                  The polished running order. Fixed, readable, and ready for the night.
+                </p>
+              </DialogPrimitive.Description>
             </div>
 
             <div className="flex items-center gap-2">

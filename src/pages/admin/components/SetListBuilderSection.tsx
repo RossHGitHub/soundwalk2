@@ -852,12 +852,16 @@ export default function SetListBuilderSection({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f0d18a]">
                   Saved Setlists
                 </p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">
-                  Open a saved show plan
-                </h3>
-                <p className="mt-2 text-sm text-white/65">
-                  Selecting a saved setlist opens the edit, view, and delete actions.
-                </p>
+                <DialogPrimitive.Title asChild>
+                  <h3 className="mt-2 text-2xl font-semibold text-white">
+                    Open a saved show plan
+                  </h3>
+                </DialogPrimitive.Title>
+                <DialogPrimitive.Description asChild>
+                  <p className="mt-2 text-sm text-white/65">
+                    Selecting a saved setlist opens the edit, view, and delete actions.
+                  </p>
+                </DialogPrimitive.Description>
               </div>
               <DialogPrimitive.Close asChild>
                 <Button type="button" variant="outline">

@@ -87,14 +87,18 @@ export default function GigModal({
 
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold">
-                {currentGig ? "Edit Gig" : "Add Gig"}
-              </h2>
-              <p className="text-sm text-white/70">
-                {currentGig
-                  ? "Update your gig details below."
-                  : "Enter details for your new gig."}
-              </p>
+              <DialogPrimitive.Title asChild>
+                <h2 className="text-xl font-semibold">
+                  {currentGig ? "Edit Gig" : "Add Gig"}
+                </h2>
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description asChild>
+                <p className="text-sm text-white/70">
+                  {currentGig
+                    ? "Update your gig details below."
+                    : "Enter details for your new gig."}
+                </p>
+              </DialogPrimitive.Description>
             </div>
             <div className="flex items-center gap-2">
               <DialogPrimitive.Close
