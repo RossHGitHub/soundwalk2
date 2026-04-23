@@ -2,9 +2,14 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { ArrowRight, Play } from "lucide-react"
 
+import Seo from "../components/Seo"
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog"
 import { Button } from "../components/ui/button"
 import type { MediaItem } from "./admin/types"
+import {
+  buildBreadcrumbJsonLd,
+  buildPageJsonLd,
+} from "../lib/seo"
 import { useSiteMedia } from "../site/SiteMediaProvider"
 
 const promoVideos = [
@@ -48,6 +53,8 @@ export default function MediaPage() {
   const [galleryLoading, setGalleryLoading] = useState(true)
   const { getSlot } = useSiteMedia()
   const heroImage = getSlot("media.hero")?.imageUrl ?? null
+  const seoDescription =
+    "Watch promo videos, live clips and gallery shots from Soundwalk, a North East wedding, function and cover band."
 
   useEffect(() => {
     let cancelled = false
@@ -86,6 +93,25 @@ export default function MediaPage() {
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
+      <Seo
+        title="Videos and Photos | Soundwalk"
+        description={seoDescription}
+        path="/media"
+        image={heroImage}
+        jsonLd={[
+          buildPageJsonLd({
+            path: "/media",
+            name: "Videos and Photos | Soundwalk",
+            description: seoDescription,
+            type: "CollectionPage",
+            image: heroImage,
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Media", path: "/media" },
+          ]),
+        ]}
+      />
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {heroImage && (
           <img
@@ -108,7 +134,8 @@ export default function MediaPage() {
               See the band before you book the night.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
-              Promo videos, live clips and photo gallery shots that show what Soundwalk actually feels like in the room.
+              Promo videos, live clips and photo gallery shots that show what Soundwalk actually feels like in the room
+              at weddings, venue nights and functions across the North East.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

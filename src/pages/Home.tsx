@@ -10,8 +10,15 @@ import {
 
 import { Card } from "../components/ui/card"
 import { Button } from "../components/ui/button"
+import Seo from "../components/Seo"
 import promoVideo from "../assets/vid/soundwalkPromo.mp4"
 import { cn } from "../lib/utils"
+import {
+  buildBreadcrumbJsonLd,
+  buildMusicGroupJsonLd,
+  buildPageJsonLd,
+  buildWebsiteJsonLd,
+} from "../lib/seo"
 import { useSiteMedia } from "../site/SiteMediaProvider"
 
 const artists = [
@@ -171,9 +178,34 @@ export default function HomePage() {
   const musicalStyleImg = getSlot("home.feature.musical-style")?.imageUrl ?? null
   const silentStageImg = getSlot("home.feature.silent-stage")?.imageUrl ?? null
   const proSoundImg = getSlot("home.feature.pro-sound")?.imageUrl ?? null
+  const logoImage = getSlot("layout.logo")?.imageUrl ?? null
+  const seoImage = musicalStyleImg ?? silentStageImg ?? proSoundImg ?? getSlot("media.hero")?.imageUrl ?? null
+  const seoDescription =
+    "Soundwalk are a North East cover band for weddings, functions, venues and private events across the North of England, with varied sets, silent stage options and pro sound."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
+      <Seo
+        title="Soundwalk | North East Cover Band for Weddings and Functions"
+        description={seoDescription}
+        path="/"
+        image={seoImage}
+        jsonLd={[
+          buildWebsiteJsonLd(),
+          buildMusicGroupJsonLd({
+            description: seoDescription,
+            image: seoImage,
+            logo: logoImage,
+          }),
+          buildPageJsonLd({
+            path: "/",
+            name: "Soundwalk | North East Cover Band for Weddings and Functions",
+            description: seoDescription,
+            image: seoImage,
+          }),
+          buildBreadcrumbJsonLd([{ name: "Home", path: "/" }]),
+        ]}
+      />
       <section className="relative isolate overflow-hidden border-b border-white/10">
         <video
           src={promoVideo}
@@ -201,8 +233,8 @@ export default function HomePage() {
               A North-East live band for weddings, functions and proper nights out.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/74 sm:text-lg">
-              From classics to modern hits, Soundwalk brings a fantastic variety of musical styles with a live setup
-              that can be tailored to the room.
+              From classics to modern hits, Soundwalk is a North-East cover band for weddings, functions, venues and
+              private events across the North of England, with a live setup that can be tailored to the room.
             </p>
             <p className="mt-4 max-w-2xl text-lg leading-7 text-white/92 sm:text-xl">
               Give your night the soundtrack it deserves.
@@ -243,7 +275,7 @@ export default function HomePage() {
               <div className="border-b border-white/10 px-5 py-4">
                 <p className="text-[0.65rem] uppercase tracking-[0.34em] text-white/45">Where Soundwalk Fits</p>
               </div>
-              <div className="grid grid-cols-2 gap-px bg-white/10">
+              <div className="grid gap-px bg-white/10 sm:grid-cols-2">
                 {[
                   ["Weddings", "A modern set with big moments for the room"],
                   ["Functions", "Flexible live music for mixed crowds and different venues"],
@@ -258,7 +290,7 @@ export default function HomePage() {
               </div>
             </Card>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               {[
                 ["Musical Style", "Classics to modern hits"],
                 ["Silent Stage", "Precise volume control"],

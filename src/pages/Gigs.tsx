@@ -5,8 +5,13 @@ import { Link } from "react-router-dom"
 import { ArrowRight } from "lucide-react"
 
 import { GigList } from "../components/GigList"
+import Seo from "../components/Seo"
 import { Button } from "../components/ui/button"
 import type { MediaItem } from "./admin/types"
+import {
+  buildBreadcrumbJsonLd,
+  buildPageJsonLd,
+} from "../lib/seo"
 import { useSiteMedia } from "../site/SiteMediaProvider"
 
 type Gig = {
@@ -138,9 +143,30 @@ export default function Gigs() {
   const gigsData = groupGigsByYearAndMonth(gigs)
   const heroImage = getSlot("gigs.hero")?.imageUrl ?? null
   const nextGig = gigs[0] ?? null
+  const seoDescription =
+    "See upcoming Soundwalk gigs across the North East and catch the band live at venues, bars and events."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
+      <Seo
+        title="Upcoming Gigs | Soundwalk"
+        description={seoDescription}
+        path="/gigs"
+        image={heroImage}
+        jsonLd={[
+          buildPageJsonLd({
+            path: "/gigs",
+            name: "Upcoming Gigs | Soundwalk",
+            description: seoDescription,
+            type: "CollectionPage",
+            image: heroImage,
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Gigs", path: "/gigs" },
+          ]),
+        ]}
+      />
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {heroImage && (
           <img
@@ -163,7 +189,7 @@ export default function Gigs() {
               Dates worth putting in the calendar.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
-              Upcoming public gigs, live dates and places to catch Soundwalk out in the wild.
+              Upcoming public gigs, live dates and places to catch Soundwalk out in the wild across the North East.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

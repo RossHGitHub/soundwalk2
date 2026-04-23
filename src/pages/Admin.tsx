@@ -69,6 +69,7 @@ import SetListBuilderSection from "./admin/components/SetListBuilderSection";
 import SongModal from "./admin/components/SongModal";
 import SongDetailsModal from "./admin/components/SongDetailsModal";
 import SiteImagesSection from "./admin/components/SiteImagesSection";
+import Seo from "../components/Seo";
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -683,8 +684,15 @@ export default function Admin() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <Hero image={SettingsAsset} title="Admin Panel" />
+    <>
+      <Seo
+        title="Admin Panel | Soundwalk"
+        description="Secure admin area for Soundwalk site management."
+        path="/admin"
+        robots="noindex,nofollow"
+      />
+      <div className="max-w-6xl mx-auto p-6">
+        <Hero image={SettingsAsset} title="Admin Panel" />
 
       <div ref={menuRef} className="scroll-mt-[125px]">
         <AdminMenuBar
@@ -871,16 +879,17 @@ export default function Admin() {
         onEdit={handleEditSongFromDetails}
       />
 
-      <SongModal
-        isOpen={isSongModalOpen}
-        onOpenChange={handleSongModalOpenChange}
-        saving={songSaving}
-        currentSong={currentSong}
-        formData={songFormData}
-        onChange={handleSongChange}
-        onSave={handleSaveSong}
-        onDelete={handleDeleteSong}
-      />
-    </div>
+        <SongModal
+          isOpen={isSongModalOpen}
+          onOpenChange={handleSongModalOpenChange}
+          saving={songSaving}
+          currentSong={currentSong}
+          formData={songFormData}
+          onChange={handleSongChange}
+          onSave={handleSaveSong}
+          onDelete={handleDeleteSong}
+        />
+      </div>
+    </>
   );
 }

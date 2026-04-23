@@ -67,10 +67,10 @@ function SiteLogo({
         className={cn(
           "w-auto object-contain transition-all duration-500",
           mobile
-            ? "h-14"
+            ? "h-12"
             : isHome && !scrolled
-              ? "h-20 lg:h-24"
-              : "h-16 lg:h-20"
+              ? "h-16 sm:h-[4.5rem] lg:h-24"
+              : "h-[3.25rem] sm:h-[3.75rem] lg:h-20"
         )}
       />
       {!mobile && (
@@ -107,13 +107,13 @@ function LayoutShell() {
       <header
         className={cn(
           "fixed inset-x-0 top-0 z-50 px-3 transition-all duration-500 sm:px-5",
-          isHome && !scrolled ? "pt-4 sm:pt-5" : "pt-3"
+          isHome && !scrolled ? "pt-3 sm:pt-5" : "pt-2.5 sm:pt-3"
         )}
       >
         <div className="mx-auto max-w-7xl">
           <div
             className={cn(
-              "flex items-center justify-between gap-4 rounded-[28px] border px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-all duration-500 sm:px-6",
+              "flex items-center justify-between gap-3 rounded-[24px] border px-3.5 py-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-all duration-500 sm:gap-4 sm:rounded-[28px] sm:px-6 sm:py-3",
               isHome && !scrolled
                 ? "border-white/10 bg-[rgba(5,8,22,0.38)] text-white"
                 : "border-white/12 bg-[rgba(5,8,22,0.82)] text-white"
@@ -297,8 +297,8 @@ function LayoutShell() {
               <img src={logoUrl} alt="Soundwalk logo" className="h-20 w-auto object-contain" />
             </Link>
             <p className="mx-auto max-w-xl text-sm leading-7 text-white/62 md:mx-0">
-              Soundwalk is a North-East covers and functions band for weddings, venues, parties and events that need a
-              proper live soundtrack.
+              Soundwalk is a North-East covers and functions band for weddings, venues, parties and private events
+              across the North of England.
             </p>
             <div className="flex items-center justify-center gap-4 text-white/64 md:justify-start">
               <a

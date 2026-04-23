@@ -1,8 +1,13 @@
 import { MailIcon, MessageCircleMore } from "lucide-react"
 import { FaFacebook, FaInstagram } from "react-icons/fa"
 
+import Seo from "../components/Seo"
 import { Button } from "../components/ui/button"
 import settingsAsset from "../assets/img/settings_asset.jpg"
+import {
+  buildBreadcrumbJsonLd,
+  buildPageJsonLd,
+} from "../lib/seo"
 import { useSiteMedia } from "../site/SiteMediaProvider"
 
 const displayFont = {
@@ -16,9 +21,30 @@ export default function ContactPage() {
     getSlot("media.hero")?.imageUrl ??
     getSlot("gigs.hero")?.imageUrl ??
     settingsAsset
+  const seoDescription =
+    "Book Soundwalk for weddings, venues, parties and private events across the North East and wider North of England."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
+      <Seo
+        title="Contact Soundwalk | North East Wedding and Function Band"
+        description={seoDescription}
+        path="/contact"
+        image={heroImage}
+        jsonLd={[
+          buildPageJsonLd({
+            path: "/contact",
+            name: "Contact Soundwalk | North East Wedding and Function Band",
+            description: seoDescription,
+            type: "ContactPage",
+            image: heroImage,
+          }),
+          buildBreadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Contact", path: "/contact" },
+          ]),
+        ]}
+      />
       <section className="relative isolate min-h-[calc(100vh-6rem)] overflow-hidden">
         <img
           src={heroImage}
@@ -40,7 +66,8 @@ export default function ContactPage() {
                 If you need a band, the email link should be the easy bit.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
-                Weddings, private events, venue bookings or general enquiries. Get in touch and we will come back to you.
+                Weddings, private events, venue bookings and function nights across the North East and wider North of
+                England. Get in touch and we will come back to you.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
