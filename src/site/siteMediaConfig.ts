@@ -49,6 +49,11 @@ export const SITE_MEDIA_SLOTS = [
     label: "Media Hero",
     description: "Hero image shown at the top of the media page.",
   },
+  {
+    key: "contact.hero",
+    label: "Contact Hero",
+    description: "Hero image shown at the top of the contact page.",
+  },
 ] as const;
 
 export type SiteMediaSlotKey = (typeof SITE_MEDIA_SLOTS)[number]["key"];

@@ -39,8 +39,9 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // put content ABOVE overlay and force a visible bg/text
-        "fixed z-50 grid w-full max-w-3xl gap-4 rounded-lg border " +
+        "fixed z-50 grid w-[calc(100vw-1rem)] max-w-3xl gap-4 rounded-lg border " +
           "bg-gray-900 text-white p-6 shadow-lg duration-200 sm:rounded-xl sm:p-10 " +
+          "max-h-[calc(100vh-1rem)] overflow-y-auto " +
           "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 " +
           "pointer-events-auto " +
           "data-[state=open]:animate-in data-[state=closed]:animate-out " +
@@ -51,7 +52,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none">
+      <DialogPrimitive.Close className="absolute right-3 top-3 z-20 rounded-full border border-white/10 bg-black/40 p-2 opacity-90 transition-opacity hover:opacity-100 focus:outline-none sm:right-4 sm:top-4">
         <X className="h-5 w-5" />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
