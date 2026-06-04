@@ -98,7 +98,7 @@ export default function RevenueRundownSection({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="bg-gray-900/70 border-white/10">
           <CardHeader>
             <CardTitle>Total revenue</CardTitle>
@@ -118,6 +118,17 @@ export default function RevenueRundownSection({
           <CardContent>
             <div className="text-3xl font-semibold text-white">
               {summary.totalGigs}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-900/70 border-white/10">
+          <CardHeader>
+            <CardTitle>Gigs played</CardTitle>
+            <CardDescription>In range up to today</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-semibold text-white">
+              {summary.completedGigs}
             </div>
           </CardContent>
         </Card>

@@ -54,7 +54,7 @@ export default function MediaPage() {
   const { getSlot } = useSiteMedia()
   const heroImage = getSlot("media.hero")?.imageUrl ?? null
   const seoDescription =
-    "Watch promo videos, live clips and gallery shots from Soundwalk, a North East wedding, function and cover band."
+    "Watch promo videos, live clips and gallery shots from Soundwalk, a North East wedding, function and cover band for Newcastle, Northumberland, Sunderland and Durham."
 
   useEffect(() => {
     let cancelled = false
@@ -94,14 +94,14 @@ export default function MediaPage() {
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
       <Seo
-        title="Videos and Photos | Soundwalk"
+        title="Wedding and Function Band Videos | Soundwalk North East"
         description={seoDescription}
         path="/media"
         image={heroImage}
         jsonLd={[
           buildPageJsonLd({
             path: "/media",
-            name: "Videos and Photos | Soundwalk",
+            name: "Wedding and Function Band Videos | Soundwalk North East",
             description: seoDescription,
             type: "CollectionPage",
             image: heroImage,
@@ -135,7 +135,7 @@ export default function MediaPage() {
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
               Promo videos, live clips and photo gallery shots that show what Soundwalk actually feels like in the room
-              at weddings, venue nights and functions across the North East.
+              at weddings, pub nights, private parties and functions across Newcastle, Northumberland and the North East.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

@@ -1,12 +1,21 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Seo from "../components/Seo";
+
+function getSafeRedirect(rawRedirect: string | null) {
+    if (!rawRedirect || !rawRedirect.startsWith('/') || rawRedirect.startsWith('//')) {
+        return '/admin';
+    }
+
+    return rawRedirect;
+}
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     const handleLogin = async () => {
         setError('');
@@ -25,8 +34,8 @@ export default function Login() {
 
             const { token } = await res.json();
             localStorage.setItem('auth-token', token);
-            navigate('/admin');
-        } catch (err) {
+            navigate(getSafeRedirect(searchParams.get('redirect')), { replace: true });
+        } catch {
             setError('Something went wrong');
         }
     };

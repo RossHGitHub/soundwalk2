@@ -22,19 +22,19 @@ export default function ContactPage() {
     getSlot("gigs.hero")?.imageUrl ??
     settingsAsset
   const seoDescription =
-    "Book Soundwalk for weddings, venues, parties and private events across the North East and wider North of England."
+    "Book Soundwalk, a North East wedding, function and cover band for Newcastle, Northumberland, Sunderland, Durham, pubs, private parties and corporate events."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
       <Seo
-        title="Contact Soundwalk | North East Wedding and Function Band"
+        title="Book a Wedding, Function or Cover Band in the North East | Soundwalk"
         description={seoDescription}
         path="/contact"
         image={heroImage}
         jsonLd={[
           buildPageJsonLd({
             path: "/contact",
-            name: "Contact Soundwalk | North East Wedding and Function Band",
+            name: "Book a Wedding, Function or Cover Band in the North East | Soundwalk",
             description: seoDescription,
             type: "ContactPage",
             image: heroImage,
@@ -66,8 +66,9 @@ export default function ContactPage() {
                 If you need a band, the email link should be the easy bit.
               </h1>
               <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
-                Weddings, private events, venue bookings and function nights across the North East and wider North of
-                England. Get in touch and we will come back to you.
+                Wedding evening dos, private parties, pub nights, social clubs, corporate events and function bookings
+                across Newcastle, Northumberland, Sunderland, Durham and the North East. Get in touch and we will come
+                back to you.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -120,7 +121,8 @@ export default function ContactPage() {
               <p className="mt-5 text-xs uppercase tracking-[0.28em] text-white/46">Best Way To Reach Us</p>
               <h2 className="mt-3 text-2xl font-semibold text-white">Email first.</h2>
               <p className="mt-3 text-sm leading-7 text-white/66">
-                The quickest route for bookings and enquiries is email. If you prefer, you can also message through socials.
+                The quickest route for wedding band, function band, pub night and private party enquiries is email. If
+                you prefer, you can also message through socials.
               </p>
               <a
                 href="mailto:soundwalkband@gmail.com?subject=Soundwalk%20Enquiry"

@@ -6,6 +6,24 @@ export const INSTAGRAM_URL = "https://www.instagram.com/soundwalkband/";
 export const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61557765549373";
 export const CONTACT_EMAIL = "soundwalkband@gmail.com";
 
+const SERVICE_AREAS = [
+  "Newcastle",
+  "Northumberland",
+  "North East England",
+  "Sunderland",
+  "Durham",
+];
+
+const PERFORMANCE_TYPES = [
+  "Wedding band",
+  "Function band",
+  "Cover band",
+  "Live band",
+  "Party band",
+  "Corporate event band",
+  "Pub band",
+];
+
 type BreadcrumbItem = {
   name: string;
   path: string;
@@ -23,6 +41,11 @@ type PageJsonLdOptions = {
   description: string;
   type?: string;
   image?: string | null;
+};
+
+type FaqItem = {
+  question: string;
+  answer: string;
 };
 
 export function toAbsoluteUrl(url?: string | null) {
@@ -59,17 +82,36 @@ export function buildMusicGroupJsonLd({
     email: CONTACT_EMAIL,
     image: toAbsoluteUrl(image),
     logo: toAbsoluteUrl(logo),
-    genre: ["Cover band", "Wedding band", "Function band", "Live band"],
-    areaServed: [
-      {
-        "@type": "Place",
-        name: "North East England",
-      },
-      {
-        "@type": "Place",
-        name: "North of England",
-      },
+    genre: PERFORMANCE_TYPES,
+    keywords: [
+      "wedding band Newcastle",
+      "wedding band Northumberland",
+      "wedding band North East",
+      "function band Newcastle",
+      "function band Northumberland",
+      "function band North East",
+      "cover band Newcastle",
+      "cover band North East",
+      "band for birthday party",
+      "live music for pub night",
+      "cover band for wedding evening do",
     ],
+    knowsAbout: PERFORMANCE_TYPES,
+    areaServed: SERVICE_AREAS.map((name) => ({
+      "@type": "Place",
+      name,
+    })),
+    makesOffer: PERFORMANCE_TYPES.map((name) => ({
+      "@type": "Offer",
+      itemOffered: {
+        "@type": "Service",
+        name,
+        areaServed: SERVICE_AREAS.map((areaName) => ({
+          "@type": "Place",
+          name: areaName,
+        })),
+      },
+    })),
     sameAs: [INSTAGRAM_URL, FACEBOOK_URL],
   };
 }
@@ -108,6 +150,21 @@ export function buildBreadcrumbJsonLd(items: BreadcrumbItem[]) {
       position: index + 1,
       name: item.name,
       item: toAbsoluteUrl(item.path),
+    })),
+  };
+}
+
+export function buildFaqJsonLd(items: FaqItem[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
     })),
   };
 }

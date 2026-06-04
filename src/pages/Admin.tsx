@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import Hero from "../components/Hero";
 import SettingsAsset from "../assets/img/settings_asset.jpg";
@@ -71,8 +71,26 @@ import SongDetailsModal from "./admin/components/SongDetailsModal";
 import SiteImagesSection from "./admin/components/SiteImagesSection";
 import Seo from "../components/Seo";
 
+const ADMIN_SECTIONS: AdminSection[] = [
+  "set-list-builder",
+  "site-images",
+  "gigs-list",
+  "gigs-calendar",
+  "payments-revenue",
+  "payments-payslips",
+  "tools",
+];
+
+function parseAdminSection(value: string | null): AdminSection {
+  return ADMIN_SECTIONS.includes(value as AdminSection)
+    ? (value as AdminSection)
+    : "gigs-list";
+}
+
 export default function Admin() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkedGigId = searchParams.get("gigId")?.trim() || "";
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [savedSetLists, setSavedSetLists] = useState<SavedSetList[]>([]);
@@ -137,7 +155,7 @@ export default function Admin() {
   // Search state
   const [search, setSearch] = useState("");
   const [activeSection, setActiveSection] =
-    useState<AdminSection>("gigs-list");
+    useState<AdminSection>(() => parseAdminSection(searchParams.get("section")));
   const [revenueGranularity, setRevenueGranularity] =
     useState<RevenueGranularity>("monthly");
   const [showRevenueRange, setShowRevenueRange] = useState(false);
@@ -150,6 +168,7 @@ export default function Admin() {
   const [syncError, setSyncError] = useState<string | null>(null);
   const [showHistoricGigs, setShowHistoricGigs] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const handledDeepLinkRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchGigs();
@@ -170,6 +189,35 @@ export default function Admin() {
   useEffect(() => {
     fetchSiteMediaSlots();
   }, []);
+
+  useEffect(() => {
+    const section = parseAdminSection(searchParams.get("section"));
+    setActiveSection((current) => (current === section ? current : section));
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!deepLinkedGigId || loading) {
+      return;
+    }
+
+    const gig = gigs.find((entry) => entry._id === deepLinkedGigId);
+    if (!gig) {
+      return;
+    }
+
+    if (handledDeepLinkRef.current === deepLinkedGigId && isDetailsModalOpen) {
+      return;
+    }
+
+    handledDeepLinkRef.current = deepLinkedGigId;
+    setShowHistoricGigs(true);
+    setActiveSection("gigs-list");
+    setSelectedGig(gig);
+    setIsDetailsModalOpen(true);
+    requestAnimationFrame(() => {
+      menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [deepLinkedGigId, gigs, isDetailsModalOpen, loading]);
 
   useEffect(() => {
     (async () => {
@@ -328,6 +376,12 @@ export default function Admin() {
     setIsDetailsModalOpen(open);
     if (!open) {
       setSelectedGig(null);
+      handledDeepLinkRef.current = null;
+      if (searchParams.has("gigId")) {
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete("gigId");
+        setSearchParams(nextParams, { replace: true });
+      }
     }
   }
 
@@ -673,6 +727,11 @@ export default function Admin() {
 
   function handleSectionChange(section: AdminSection) {
     setActiveSection(section);
+    handledDeepLinkRef.current = null;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("section", section);
+    nextParams.delete("gigId");
+    setSearchParams(nextParams);
     requestAnimationFrame(() => {
       menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });

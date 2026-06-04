@@ -53,11 +53,13 @@ function formatGigDateForNotification(dateValue: Date, startTime?: string | null
 }
 
 async function notifyGigBooked({
+  gigId,
   venue,
   date,
   startTime,
   fee,
 }: {
+  gigId: string;
   venue: string;
   date: Date;
   startTime?: string | null;
@@ -69,7 +71,7 @@ async function notifyGigBooked({
       title: `✅ Gig booked: '${venue}'`,
       body,
       tag: 'gig-booked',
-      url: '/admin',
+      url: `/admin?section=gigs-list&gigId=${encodeURIComponent(gigId)}`,
     });
   } catch (error) {
     console.error('Failed to send gig booked push notification:', error);
@@ -194,6 +196,7 @@ export default async function handler(req: any, res: any) {
     }
 
     await notifyGigBooked({
+      gigId: r.insertedId.toString(),
       venue: newGig.venue,
       date: newGig.date,
       startTime: newGig.startTime,

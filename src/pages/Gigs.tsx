@@ -144,19 +144,19 @@ export default function Gigs() {
   const heroImage = getSlot("gigs.hero")?.imageUrl ?? null
   const nextGig = gigs[0] ?? null
   const seoDescription =
-    "See upcoming Soundwalk gigs across the North East and catch the band live at venues, bars and events."
+    "See upcoming Soundwalk gigs across Newcastle, Northumberland, Sunderland, Durham and the North East before booking the band for weddings, functions, pubs and parties."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
       <Seo
-        title="Upcoming Gigs | Soundwalk"
+        title="Upcoming North East Gigs | Soundwalk Wedding and Function Band"
         description={seoDescription}
         path="/gigs"
         image={heroImage}
         jsonLd={[
           buildPageJsonLd({
             path: "/gigs",
-            name: "Upcoming Gigs | Soundwalk",
+            name: "Upcoming North East Gigs | Soundwalk Wedding and Function Band",
             description: seoDescription,
             type: "CollectionPage",
             image: heroImage,
@@ -189,7 +189,8 @@ export default function Gigs() {
               Dates worth putting in the calendar.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/72 sm:text-lg">
-              Upcoming public gigs, live dates and places to catch Soundwalk out in the wild across the North East.
+              Upcoming public gigs, live dates and places to catch Soundwalk out in the wild across Newcastle,
+              Northumberland and the North East.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">

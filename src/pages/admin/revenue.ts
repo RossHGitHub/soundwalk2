@@ -12,6 +12,7 @@ export type RevenueSummary = {
   chartData: RevenueBucket[];
   totalRevenue: number;
   totalGigs: number;
+  completedGigs: number;
   averageRevenue: number;
 };
 
@@ -66,6 +67,9 @@ export function buildRevenueSummary({
 
   const totalRevenue = filtered.reduce((sum, entry) => sum + entry.revenue, 0);
   const totalGigs = filtered.length;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  const completedGigs = filtered.filter((entry) => entry.date <= today).length;
   const averageRevenue = totalGigs > 0 ? totalRevenue / totalGigs : 0;
 
   const labelFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -114,6 +118,7 @@ export function buildRevenueSummary({
     chartData,
     totalRevenue,
     totalGigs,
+    completedGigs,
     averageRevenue,
   };
 }

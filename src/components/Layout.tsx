@@ -75,8 +75,8 @@ function SiteLogo({
       />
       {!mobile && (
         <div className="hidden lg:block">
-          <p className="text-xs uppercase tracking-[0.34em] text-white/45">North-East Live Band</p>
-          <p className="mt-1 text-sm text-white/72">Weddings, functions, venues</p>
+          <p className="text-xs uppercase tracking-[0.34em] text-white/45">North East Live Band</p>
+          <p className="mt-1 text-sm text-white/72">Weddings, functions, pubs</p>
         </div>
       )}
     </div>
@@ -203,7 +203,7 @@ function LayoutShell() {
                   </div>
                   <SheetTitle className="mt-4 text-2xl text-white">Soundwalk</SheetTitle>
                   <SheetDescription className="max-w-[18rem] text-sm leading-6 text-white/60">
-                    Weddings, functions, venues and nights out.
+                    Wedding, function and cover band for the North East.
                   </SheetDescription>
                 </SheetHeader>
 
@@ -247,7 +247,7 @@ function LayoutShell() {
                   <div className="mt-8 rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs uppercase tracking-[0.28em] text-white/42">Get In Touch</p>
                     <p className="mt-3 text-sm leading-6 text-white/62">
-                      Looking for a band for a wedding, party, venue or function night?
+                      Looking for a band for a wedding, birthday party, pub night or function?
                     </p>
                     <SheetClose asChild>
                       <Button asChild className="mt-4 h-11 w-full rounded-full bg-white text-[#050816] hover:bg-white/92">
@@ -297,8 +297,8 @@ function LayoutShell() {
               <img src={logoUrl} alt="Soundwalk logo" className="h-20 w-auto object-contain" />
             </Link>
             <p className="mx-auto max-w-xl text-sm leading-7 text-white/62 md:mx-0">
-              Soundwalk is a North-East covers and functions band for weddings, venues, parties and private events
-              across the North of England.
+              Soundwalk is a North East wedding, function and cover band for Newcastle, Northumberland, Sunderland,
+              Durham, pubs, parties and private events.
             </p>
             <div className="flex items-center justify-center gap-4 text-white/64 md:justify-start">
               <a

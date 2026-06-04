@@ -15,6 +15,7 @@ import promoVideo from "../assets/vid/soundwalkPromo.mp4"
 import { cn } from "../lib/utils"
 import {
   buildBreadcrumbJsonLd,
+  buildFaqJsonLd,
   buildMusicGroupJsonLd,
   buildPageJsonLd,
   buildWebsiteJsonLd,
@@ -58,6 +59,29 @@ const bandMembers = [
     role: "Drums, timing, controlled chaos",
     slot: "home.band.barry" as const,
     copy: "Decades deep in live rooms, with the feel to keep a packed floor locked in.",
+  },
+]
+
+const faqItems = [
+  {
+    question: "Are Soundwalk a wedding band?",
+    answer:
+      "Yes. Soundwalk take wedding bookings across Newcastle, Northumberland and the wider North East.",
+  },
+  {
+    question: "Can I book Soundwalk as a function band?",
+    answer:
+      "Yes. Soundwalk provide live music for functions, pub nights, social clubs, corporate events and private parties, with a flexible set of classic and modern covers.",
+  },
+  {
+    question: "Do Soundwalk play birthday parties and private events?",
+    answer:
+      "Yes. Soundwalk can be booked for birthday parties, private events and celebrations across Newcastle, Northumberland, Sunderland, Durham and nearby North East venues.",
+  },
+  {
+    question: "What kind of cover band set do Soundwalk play?",
+    answer:
+      "The set covers classics, indie, pop, rock and modern hits, built for mixed rooms where guests want familiar songs and a proper live band feel.",
   },
 ]
 
@@ -181,12 +205,12 @@ export default function HomePage() {
   const logoImage = getSlot("layout.logo")?.imageUrl ?? null
   const seoImage = musicalStyleImg ?? silentStageImg ?? proSoundImg ?? getSlot("media.hero")?.imageUrl ?? null
   const seoDescription =
-    "Soundwalk are a North East cover band for weddings, functions, venues and private events across the North of England, with varied sets, silent stage options and pro sound."
+    "Soundwalk are a North East wedding, function and cover band for Newcastle, Northumberland, Sunderland and Durham, playing pubs, parties, corporate events and private functions."
 
   return (
     <main className="overflow-hidden bg-[#050816] text-white">
       <Seo
-        title="Soundwalk | North East Cover Band for Weddings and Functions"
+        title="Wedding & Function Band Newcastle and Northumberland | Soundwalk"
         description={seoDescription}
         path="/"
         image={seoImage}
@@ -199,10 +223,11 @@ export default function HomePage() {
           }),
           buildPageJsonLd({
             path: "/",
-            name: "Soundwalk | North East Cover Band for Weddings and Functions",
+            name: "Wedding & Function Band Newcastle and Northumberland | Soundwalk",
             description: seoDescription,
             image: seoImage,
           }),
+          buildFaqJsonLd(faqItems),
           buildBreadcrumbJsonLd([{ name: "Home", path: "/" }]),
         ]}
       />
@@ -224,17 +249,17 @@ export default function HomePage() {
         <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] w-full max-w-7xl gap-12 px-6 pb-14 pt-32 sm:px-8 sm:pb-16 sm:pt-36 lg:grid-cols-[minmax(0,1.2fr)_380px] lg:items-end lg:px-12 lg:pb-18 lg:pt-28">
           <div className="max-w-3xl">
             <p className="text-xs uppercase tracking-[0.36em] text-white/58">
-              North-East based functions and covers band
+              Newcastle, Northumberland and North East live band
             </p>
             <h1
               className="mt-5 max-w-4xl text-5xl leading-none font-semibold tracking-[-0.04em] text-white sm:text-6xl lg:text-8xl"
               style={displayFont}
             >
-              A North-East live band for weddings, functions and proper nights out.
+              Wedding and function band for Newcastle, Northumberland and the North East.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/74 sm:text-lg">
-              From classics to modern hits, Soundwalk is a North-East cover band for weddings, functions, venues and
-              private events across the North of England, with a live setup that can be tailored to the room.
+              From classics to modern hits, Soundwalk is a North East cover band for weddings, functions, pubs, social
+              clubs, corporate events and private parties across Newcastle, Northumberland, Sunderland and Durham.
             </p>
             <p className="mt-4 max-w-2xl text-lg leading-7 text-white/92 sm:text-xl">
               Give your night the soundtrack it deserves.
@@ -262,7 +287,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3 text-xs uppercase tracking-[0.26em] text-white/58 sm:text-sm">
-              {["Musical variety", "Silent stage options", "Professional sound & lighting", "Weddings and functions"].map((item) => (
+              {["Wedding band", "Function band", "Cover band", "Pubs and parties", "North East venues"].map((item) => (
                 <span key={item} className="rounded-full border border-white/14 bg-white/6 px-4 py-2 backdrop-blur-sm">
                   {item}
                 </span>
@@ -277,10 +302,10 @@ export default function HomePage() {
               </div>
               <div className="grid gap-px bg-white/10 sm:grid-cols-2">
                 {[
-                  ["Weddings", "A modern set with big moments for the room"],
-                  ["Functions", "Flexible live music for mixed crowds and different venues"],
-                  ["Bars", "A proper live feel without leaning on the same old standards"],
-                  ["Events", "Clean FoH integration when in-house production is involved"],
+                  ["Weddings", "A wedding evening do set with big moments for the room"],
+                  ["Functions", "Flexible live music for mixed crowds and function nights"],
+                  ["Pubs and social clubs", "A proper live feel for venue nights across the North East"],
+                  ["Corporate events", "Clean FoH integration when in-house production is involved"],
                 ].map(([title, body]) => (
                   <div key={title} className="bg-[rgba(5,8,22,0.72)] px-5 py-5">
                     <p className="text-sm font-semibold text-white">{title}</p>
@@ -322,7 +347,11 @@ export default function HomePage() {
             <p className="mt-5 text-base leading-7 text-white/72">
               Gone are the days where the over-played rock classics are enough to satisfy everyone in the room. We
               offer a fantastic variety of musical styles, from classics to modern hits, alongside a stage setup that
-              can be tailored to suit the venue.
+              can be tailored to suit wedding venues, pubs, social clubs, private parties and corporate functions.
+            </p>
+            <p className="mt-4 text-base leading-7 text-white/72">
+              Based in the North East, we take bookings across Newcastle, Northumberland, Sunderland, Durham and the
+              surrounding area.
             </p>
 
           </div>
@@ -382,7 +411,7 @@ export default function HomePage() {
               icon={<Disc3 className="size-5" />}
               eyebrow="Musical Style"
               title="Built for a mixed room"
-              body="From weddings to functions, we aim for a set that feels broad, current and strong from start to finish."
+              body="From wedding guests to pub regulars, we aim for a set that feels broad, current and strong from start to finish."
             />
             <GlassCard
               icon={<AudioWaveform className="size-5" />}
@@ -413,7 +442,8 @@ export default function HomePage() {
               </h2>
             </div>
             <p className="max-w-xl text-sm leading-7 text-white/66 sm:text-base">
-              A tight three-piece setup with the range and flexibility to handle weddings, functions and live venues.
+              A tight three-piece setup with the range and flexibility to handle weddings, functions, pub nights and
+              private parties.
             </p>
           </div>
 
@@ -429,6 +459,29 @@ export default function HomePage() {
             ))}
           </div>
 
+          <div className="mt-12">
+            <div className="max-w-2xl">
+              <p className="text-xs uppercase tracking-[0.34em] text-[#f4a67d]">Booking Soundwalk</p>
+              <h2
+                className="mt-4 text-4xl leading-tight font-semibold tracking-[-0.03em] text-white sm:text-5xl"
+                style={displayFont}
+              >
+                Wedding band, function band or pub night?
+              </h2>
+            </div>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {faqItems.map((item) => (
+                <Card
+                  key={item.question}
+                  className="gap-0 rounded-[28px] border-white/10 bg-white/5 p-6 text-white shadow-[0_24px_80px_rgba(0,0,0,0.2)]"
+                >
+                  <h3 className="text-lg font-semibold text-white">{item.question}</h3>
+                  <p className="mt-3 text-sm leading-7 text-white/66">{item.answer}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-12 rounded-[34px] border border-white/12 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.24)] backdrop-blur-sm sm:p-10">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-2xl">
@@ -437,8 +490,8 @@ export default function HomePage() {
                   Give your night the soundtrack it deserves.
                 </h3>
                 <p className="mt-4 text-sm leading-7 text-white/66 sm:text-base">
-                  Have a look around, watch the band in action, or get in touch for weddings, private events and venue
-                  bookings.
+                  Have a look around, watch the band in action, or get in touch for weddings, pub nights, private events
+                  and function bookings across Newcastle, Northumberland and the North East.
                 </p>
               </div>
 
