@@ -2,7 +2,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { FileMusic, Music2, Pencil, Timer, UserRound, X } from "lucide-react";
 
 import { Button } from "../../../components/ui/button";
-import { formatDuration, parseDurationToSeconds } from "../songs";
+import { formatDuration, formatSingers, parseDurationToSeconds } from "../songs";
 import type { Song } from "../types";
 
 type Props = {
@@ -95,7 +95,7 @@ export default function SongDetailsModal({
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <DetailBlock icon={Music2} label="Title" value={song.title || "Not set"} />
             <DetailBlock
               icon={UserRound}
@@ -110,6 +110,11 @@ export default function SongDetailsModal({
                   ? `${song.duration} (${formatDuration(parseDurationToSeconds(song.duration))})`
                   : song.duration || "Not set"
               }
+            />
+            <DetailBlock
+              icon={UserRound}
+              label="Singers"
+              value={formatSingers(song.singers)}
             />
           </div>
 

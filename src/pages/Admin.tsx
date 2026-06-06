@@ -16,6 +16,7 @@ import type {
   MediaItem,
   MediaSyncResult,
   SavedSetList,
+  Singer,
   SiteMediaSlot,
   Song,
   SyncResult,
@@ -55,6 +56,7 @@ import {
   buildSongFormData,
   isValidDuration,
   normalizeDurationValue,
+  SINGERS,
 } from "./admin/songs";
 import AdminMenuBar from "./admin/components/AdminMenuBar";
 import AdminHeader from "./admin/components/AdminHeader";
@@ -465,6 +467,23 @@ export default function Admin() {
             ? normalizeDurationValue(value)
             : value,
     }));
+  }
+
+  function handleSongSingerToggle(singer: Singer, checked: boolean) {
+    setSongFormData((prev) => {
+      const selectedSingers = new Set(prev.singers ?? []);
+
+      if (checked) {
+        selectedSingers.add(singer);
+      } else {
+        selectedSingers.delete(singer);
+      }
+
+      return {
+        ...prev,
+        singers: SINGERS.filter((name) => selectedSingers.has(name)),
+      };
+    });
   }
 
   function handleVenueSuggestionClick(venue: string) {
@@ -945,6 +964,7 @@ export default function Admin() {
           currentSong={currentSong}
           formData={songFormData}
           onChange={handleSongChange}
+          onSingerToggle={handleSongSingerToggle}
           onSave={handleSaveSong}
           onDelete={handleDeleteSong}
         />

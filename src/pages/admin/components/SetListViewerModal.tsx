@@ -1,10 +1,18 @@
+import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Download, Sparkles, Star, X } from "lucide-react";
 
 import { Button } from "../../../components/ui/button";
 import logoUrl from "../../../assets/img/logo.jpg";
-import { formatDuration, parseDurationToSeconds } from "../songs";
+import { formatDuration, normalizeSingers, parseDurationToSeconds } from "../songs";
+import {
+  downloadLyricsPdf,
+  getLyricsForSelection,
+  getSafeFileName,
+  LYRIC_PRINT_OPTIONS,
+  type LyricPrintSelection,
+} from "../setlistLyricsPdf";
 import type { SavedSetList, Song } from "../types";
 
 type Props = {
@@ -39,6 +47,13 @@ export default function SetListViewerModal({
   songsById,
   onEdit,
 }: Props) {
+  const [lyricsPrintSelection, setLyricsPrintSelection] =
+    useState<LyricPrintSelection>("");
+
+  useEffect(() => {
+    setLyricsPrintSelection("");
+  }, [isOpen, setlist?._id]);
+
   if (!setlist) return null;
   const currentSetList = setlist;
 
@@ -78,7 +93,9 @@ export default function SetListViewerModal({
         const lines = set.entries.map((entry) => {
           const song = songsById.get(entry.songId);
           const titleText = (song?.title || "Unknown song").toUpperCase();
-          const lineText = song?.backingTrack ? `${titleText} (BT)` : titleText;
+          const singerText = normalizeSingers(song?.singers).join("/").toUpperCase();
+          const songText = singerText ? `${titleText} - ${singerText}` : titleText;
+          const lineText = song?.backingTrack ? `${songText} (BT)` : songText;
           return lineText;
         });
 
@@ -117,15 +134,38 @@ export default function SetListViewerModal({
         });
       });
 
-      const safeFileName = `${currentSetList.title}`
-        .replace(/[^a-z0-9]+/gi, "-")
-        .replace(/^-+|-+$/g, "")
-        .toLowerCase();
+      const safeFileName = getSafeFileName(currentSetList.title, "setlist");
 
       doc.save(`${safeFileName || "setlist"}.pdf`);
     } catch (error) {
       console.error(error);
       alert("Failed to generate the setlist PDF.");
+    }
+  }
+
+  function handleDownloadLyricsPdf() {
+    if (!lyricsPrintSelection) return;
+
+    const lyricSongs = getLyricsForSelection(
+      currentSetList,
+      songsById,
+      lyricsPrintSelection
+    );
+
+    if (lyricSongs.length === 0) {
+      const message =
+        lyricsPrintSelection === "All"
+          ? "There are no songs in this setlist to print."
+          : `No songs in this setlist are assigned to ${lyricsPrintSelection}.`;
+      alert(message);
+      return;
+    }
+
+    try {
+      downloadLyricsPdf(currentSetList, songsById, lyricsPrintSelection);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate the lyrics PDF.");
     }
   }
 
@@ -152,14 +192,46 @@ export default function SetListViewerModal({
               </DialogPrimitive.Description>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2">
+                <label
+                  htmlFor="lyricsPrintSelection"
+                  className="text-sm font-semibold text-white/78"
+                >
+                  Print lyrics:
+                </label>
+                <select
+                  id="lyricsPrintSelection"
+                  value={lyricsPrintSelection}
+                  onChange={(event) =>
+                    setLyricsPrintSelection(event.target.value as LyricPrintSelection)
+                  }
+                  className="h-9 rounded-md border border-white/10 bg-[#120f16] px-3 text-sm text-white outline-none transition focus-visible:border-[#d6af67] focus-visible:ring-2 focus-visible:ring-[#d6af67]/30"
+                >
+                  <option value="">Select...</option>
+                  {LYRIC_PRINT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadLyricsPdf}
+                  disabled={!lyricsPrintSelection}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleDownloadPdf}
               >
                 <Download className="h-4 w-4" />
-                Download
+                Setlist PDF
               </Button>
               <Button
                 type="button"
@@ -216,6 +288,7 @@ export default function SetListViewerModal({
                     <div className="mt-4 space-y-2">
                       {set.entries.map((entry, index) => {
                         const song = songsById.get(entry.songId);
+                        const singerNames = normalizeSingers(song?.singers);
 
                         return (
                           <div
@@ -236,6 +309,15 @@ export default function SetListViewerModal({
                                 </div>
                                 <p className="truncate text-sm text-white/55">
                                   {song?.artist?.trim() || "Artist not set"}
+                                </p>
+                                <p
+                                  className={`truncate text-xs ${
+                                    singerNames.length ? "text-[#f0d18a]" : "text-white/35"
+                                  }`}
+                                >
+                                  {singerNames.length
+                                    ? singerNames.join(" / ")
+                                    : "Singers not set"}
                                 </p>
                               </div>
                               <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/60">

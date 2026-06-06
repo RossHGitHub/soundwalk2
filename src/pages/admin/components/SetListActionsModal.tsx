@@ -1,8 +1,15 @@
+import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Eye, ListMusic, PencilLine, Trash2, X } from "lucide-react";
+import { Download, Eye, ListMusic, PencilLine, Trash2, X } from "lucide-react";
 
 import { Button } from "../../../components/ui/button";
 import { formatDuration, parseDurationToSeconds } from "../songs";
+import {
+  downloadLyricsPdf,
+  getLyricsForSelection,
+  LYRIC_PRINT_OPTIONS,
+  type LyricPrintSelection,
+} from "../setlistLyricsPdf";
 import type { SavedSetList, Song } from "../types";
 
 type Props = {
@@ -41,9 +48,37 @@ export default function SetListActionsModal({
   onView,
   onDelete,
 }: Props) {
+  const [lyricsPrintSelection, setLyricsPrintSelection] =
+    useState<LyricPrintSelection>("");
+
+  useEffect(() => {
+    setLyricsPrintSelection("");
+  }, [isOpen, setlist?._id]);
+
   if (!setlist) return null;
 
   const stats = getStats(setlist, songsById);
+
+  function handleDownloadLyricsPdf() {
+    if (!lyricsPrintSelection || !setlist) return;
+
+    const lyricSongs = getLyricsForSelection(setlist, songsById, lyricsPrintSelection);
+    if (lyricSongs.length === 0) {
+      const message =
+        lyricsPrintSelection === "All"
+          ? "There are no songs in this setlist to print."
+          : `No songs in this setlist are assigned to ${lyricsPrintSelection}.`;
+      alert(message);
+      return;
+    }
+
+    try {
+      downloadLyricsPdf(setlist, songsById, lyricsPrintSelection);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate the lyrics PDF.");
+    }
+  }
 
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -95,6 +130,40 @@ export default function SetListActionsModal({
           </div>
 
           <div className="mt-6 grid gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <label
+                  htmlFor="actionsLyricsPrintSelection"
+                  className="text-sm font-semibold text-white/78"
+                >
+                  Print lyrics:
+                </label>
+                <select
+                  id="actionsLyricsPrintSelection"
+                  value={lyricsPrintSelection}
+                  onChange={(event) =>
+                    setLyricsPrintSelection(event.target.value as LyricPrintSelection)
+                  }
+                  className="h-9 min-w-32 rounded-md border border-white/10 bg-[#101c24] px-3 text-sm text-white outline-none transition focus-visible:border-[#d6af67] focus-visible:ring-2 focus-visible:ring-[#d6af67]/30"
+                >
+                  <option value="">Select...</option>
+                  {LYRIC_PRINT_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleDownloadLyricsPdf}
+                  disabled={!lyricsPrintSelection}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
+            </div>
             <Button
               type="button"
               variant="outline"

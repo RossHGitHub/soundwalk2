@@ -1,7 +1,20 @@
 import { MongoClient, ObjectId } from "mongodb";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { requireEnv } from "./_envGuard.js";
 
 let client: MongoClient | null = null;
+
+const SINGERS = ["Ross", "Keith", "Barry"] as const;
+
+type SongRequestBody = {
+  _id?: unknown;
+  title?: unknown;
+  artist?: unknown;
+  duration?: unknown;
+  lyrics?: unknown;
+  backingTrack?: unknown;
+  singers?: unknown;
+};
 
 async function getDb() {
   const uri = requireEnv("MONGODB_URI");
@@ -16,17 +29,29 @@ async function getDb() {
   return client.db(dbName);
 }
 
-function sanitizeSong(body: any) {
+function sanitizeSingers(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return SINGERS.filter((singer) => value.includes(singer));
+}
+
+function asSongRequestBody(value: unknown): SongRequestBody {
+  return value && typeof value === "object" ? (value as SongRequestBody) : {};
+}
+
+function sanitizeSong(bodyValue: unknown) {
+  const body = asSongRequestBody(bodyValue);
+
   return {
     title: String(body?.title ?? "").trim(),
     artist: String(body?.artist ?? "").trim(),
     duration: String(body?.duration ?? "").trim(),
     lyrics: String(body?.lyrics ?? "").trim(),
     backingTrack: !!body?.backingTrack,
+    singers: sanitizeSingers(body?.singers),
   };
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = await getDb();
     const col = db.collection("songs");

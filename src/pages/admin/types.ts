@@ -23,9 +23,12 @@ export type Song = {
   duration: string;
   lyrics: string;
   backingTrack?: boolean;
+  singers?: Singer[];
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type Singer = "Ross" | "Keith" | "Barry";
 
 export type MediaItem = {
   _id?: string;

@@ -1,6 +1,17 @@
-import type { SetList, Song } from "./types";
+import type { SetList, Singer, Song } from "./types";
 
 export const SET_LIST_STORAGE_KEY = "soundwalk:set-list-builder:v1";
+export const SINGERS: Singer[] = ["Ross", "Keith", "Barry"];
+
+export function normalizeSingers(value?: readonly unknown[]): Singer[] {
+  if (!Array.isArray(value)) return [];
+  return SINGERS.filter((singer) => value.includes(singer));
+}
+
+export function formatSingers(value?: readonly unknown[]) {
+  const singers = normalizeSingers(value);
+  return singers.length ? singers.join(" / ") : "Not set";
+}
 
 export function buildSongFormData(song?: Song | null): Song {
   if (song) {
@@ -11,6 +22,7 @@ export function buildSongFormData(song?: Song | null): Song {
       duration: song.duration ?? "",
       lyrics: song.lyrics ?? "",
       backingTrack: !!song.backingTrack,
+      singers: normalizeSingers(song.singers),
       createdAt: song.createdAt,
       updatedAt: song.updatedAt,
     };
@@ -22,6 +34,7 @@ export function buildSongFormData(song?: Song | null): Song {
     duration: "",
     lyrics: "",
     backingTrack: false,
+    singers: [],
   };
 }
 

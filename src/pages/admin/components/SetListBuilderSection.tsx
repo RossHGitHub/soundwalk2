@@ -23,6 +23,7 @@ import {
   createSetListId,
   ensureMinimumSets,
   formatDuration,
+  normalizeSingers,
   parseDurationToSeconds,
 } from "../songs";
 import {
@@ -166,7 +167,7 @@ export default function SetListBuilderSection({
     if (!query) return availableSongs;
 
     return availableSongs.filter((song) =>
-      [song.title, song.artist, song.lyrics].some((value) =>
+      [song.title, song.artist, song.lyrics, normalizeSingers(song.singers).join(" ")].some((value) =>
         value.toLowerCase().includes(query)
       )
     );
@@ -536,6 +537,7 @@ export default function SetListBuilderSection({
                     const song = songsById.get(entry.songId);
                     if (!song) return null;
 
+                    const singerNames = normalizeSingers(song.singers);
                     const showDropBefore =
                       dropTarget?.setId === set.id && dropTarget.index === index;
 
@@ -590,6 +592,15 @@ export default function SetListBuilderSection({
                                 </div>
                                 <p className="truncate text-xs text-white/60">
                                   {song.artist?.trim() || "Artist not set"}
+                                </p>
+                                <p
+                                  className={`truncate text-[11px] ${
+                                    singerNames.length ? "text-[#f0d18a]" : "text-white/35"
+                                  }`}
+                                >
+                                  {singerNames.length
+                                    ? singerNames.join(" / ")
+                                    : "Singers not set"}
                                 </p>
                               </div>
                             </button>
@@ -747,6 +758,7 @@ export default function SetListBuilderSection({
             {filteredSongs.map((song) => {
               const songId = song._id;
               if (!songId) return null;
+              const singerNames = normalizeSingers(song.singers);
 
               return (
                 <article
@@ -776,6 +788,13 @@ export default function SetListBuilderSection({
                       </div>
                       <p className="truncate text-[11px] text-white/55">
                         {song.artist?.trim() || "Artist not set"}
+                      </p>
+                      <p
+                        className={`truncate text-[11px] ${
+                          singerNames.length ? "text-[#f0d18a]" : "text-white/35"
+                        }`}
+                      >
+                        {singerNames.length ? singerNames.join(" / ") : "Singers not set"}
                       </p>
                     </div>
                     <div className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-emerald-200">

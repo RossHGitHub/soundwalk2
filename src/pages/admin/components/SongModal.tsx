@@ -7,7 +7,8 @@ import { Checkbox } from "../../../components/ui/checkbox";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
-import type { Song } from "../types";
+import { SINGERS } from "../songs";
+import type { Singer, Song } from "../types";
 
 type Props = {
   isOpen: boolean;
@@ -16,6 +17,7 @@ type Props = {
   currentSong: Song | null;
   formData: Song;
   onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onSingerToggle: (singer: Singer, checked: boolean) => void;
   onSave: (e: FormEvent) => void;
   onDelete: () => void;
 };
@@ -46,9 +48,12 @@ export default function SongModal({
   currentSong,
   formData,
   onChange,
+  onSingerToggle,
   onSave,
   onDelete,
 }: Props) {
+  const selectedSingers = new Set(formData.singers ?? []);
+
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
@@ -155,6 +160,31 @@ export default function SongModal({
                     Toggle if this song relies on a backing track.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+              <Label>Who sings</Label>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {SINGERS.map((singer) => {
+                  const checkboxId = `songSinger${singer}`;
+
+                  return (
+                    <div
+                      key={singer}
+                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/10 px-3 py-2"
+                    >
+                      <Checkbox
+                        id={checkboxId}
+                        checked={selectedSingers.has(singer)}
+                        onCheckedChange={(checked) =>
+                          onSingerToggle(singer, checked === true)
+                        }
+                      />
+                      <Label htmlFor={checkboxId}>{singer}</Label>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
