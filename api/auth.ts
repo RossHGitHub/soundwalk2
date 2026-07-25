@@ -1,7 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { MongoClient } from 'mongodb';
+import { requireAdmin } from './_adminAuth.js';
 import { requireEnv } from './_envGuard.js';
+import { rejectAuthError, rejectUntrustedRequest } from './_requestGuards.js';
 
 let client: MongoClient | null = null;
 
@@ -18,8 +20,20 @@ async function getDb() {
 
 export default async function handler(req: any, res: any) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
+    if (req.method === 'GET') {
+      try {
+        requireAdmin(req);
+      } catch (error) {
+        return rejectAuthError(error, res);
+      }
+
+      return res.status(200).json({ ok: true });
+    }
+
     if (req.method !== 'POST') {
-      res.setHeader('Allow', ['POST']);
+      res.setHeader('Allow', ['GET', 'POST']);
       return res.status(405).json({ error: 'Method not allowed' });
     }
 

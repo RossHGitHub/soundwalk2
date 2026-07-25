@@ -1,5 +1,6 @@
 import { ObjectId } from "mongodb";
 import { requireAdmin } from "./_adminAuth.js";
+import { rejectUntrustedRequest } from "./_requestGuards.js";
 import {
   buildMediaUrl,
   getMediaCollection,
@@ -67,6 +68,8 @@ async function buildSlotPayload() {
 
 export default async function handler(req: any, res: any) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
     if (req.method === "GET") {
       const slots = await buildSlotPayload();
       return res.status(200).json(

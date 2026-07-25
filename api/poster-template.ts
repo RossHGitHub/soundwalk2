@@ -1,6 +1,7 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getR2Client, inferContentType } from "./_media.js";
+import { rejectUntrustedRequest } from "./_requestGuards.js";
 
 const DEFAULT_POSTER_TEMPLATE_KEY = "sw-poster-template.png";
 
@@ -125,6 +126,8 @@ async function sendObjectBody(res: VercelResponse, body: unknown) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (rejectUntrustedRequest(req, res)) return;
+
   if (req.method !== "GET" && req.method !== "HEAD") {
     res.setHeader("Allow", ["GET", "HEAD"]);
     return res.status(405).json({ error: "Method not allowed" });

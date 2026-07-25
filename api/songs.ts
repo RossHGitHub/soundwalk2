@@ -1,6 +1,8 @@
 import { MongoClient, ObjectId } from "mongodb";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { requireAdmin } from "./_adminAuth.js";
 import { requireEnv } from "./_envGuard.js";
+import { rejectAuthError, rejectUntrustedRequest } from "./_requestGuards.js";
 
 let client: MongoClient | null = null;
 
@@ -53,6 +55,14 @@ function sanitizeSong(bodyValue: unknown) {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
+    try {
+      requireAdmin(req);
+    } catch (error) {
+      return rejectAuthError(error, res);
+    }
+
     const db = await getDb();
     const col = db.collection("songs");
 

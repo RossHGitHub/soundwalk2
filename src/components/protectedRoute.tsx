@@ -1,5 +1,6 @@
 // components/ProtectedRoute.tsx
 import type { JSX } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
 interface ProtectedRouteProps {
@@ -8,11 +9,56 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-  const token = localStorage.getItem("auth-token"); // JWT stored in localStorage
+  const [authStatus, setAuthStatus] = useState<"checking" | "valid" | "invalid">(
+    "checking"
+  );
+  const token = localStorage.getItem("auth-token");
+  const redirectTarget = `${location.pathname}${location.search}${location.hash}`;
 
-  if (!token) {
-    const redirectTarget = `${location.pathname}${location.search}${location.hash}`;
-    // Redirect to login if no token
+  useEffect(() => {
+    const storedToken = localStorage.getItem("auth-token");
+
+    if (!storedToken) {
+      setAuthStatus("invalid");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function verifyToken() {
+      try {
+        const res = await fetch("/api/auth", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!res.ok) {
+          localStorage.removeItem("auth-token");
+          setAuthStatus("invalid");
+          return;
+        }
+
+        setAuthStatus("valid");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        localStorage.removeItem("auth-token");
+        setAuthStatus("invalid");
+      }
+    }
+
+    setAuthStatus("checking");
+    void verifyToken();
+
+    return () => controller.abort();
+  }, [location.pathname, location.search, location.hash]);
+
+  if (!token || authStatus === "invalid") {
     return (
       <Navigate
         to={`/login?redirect=${encodeURIComponent(redirectTarget)}`}
@@ -21,7 +67,13 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Optional: add token validation logic here (e.g., decode and check expiry)
+  if (authStatus === "checking") {
+    return (
+      <div className="grid min-h-[40vh] place-items-center text-sm text-white/70">
+        Checking admin access...
+      </div>
+    );
+  }
 
   return children;
 }

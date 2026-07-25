@@ -1,17 +1,5 @@
 import type { SiteMediaSlot } from "../types";
-
-function getAdminHeaders() {
-  const token = localStorage.getItem("auth-token");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-}
+import { getAdminHeaders } from "./adminAuth";
 
 export async function fetchSiteMediaSlots(): Promise<SiteMediaSlot[]> {
   const res = await fetch("/api/site-media");
@@ -28,7 +16,7 @@ export async function saveSiteMediaSlot(
 ): Promise<SiteMediaSlot> {
   const res = await fetch("/api/site-media", {
     method: "POST",
-    headers: getAdminHeaders(),
+    headers: getAdminHeaders(true),
     body: JSON.stringify({ key, mediaId }),
   });
 

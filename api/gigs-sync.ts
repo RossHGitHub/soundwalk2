@@ -1,4 +1,6 @@
 import { requireEnv } from "./_envGuard.js";
+import { requireAdmin } from "./_adminAuth.js";
+import { rejectAuthError, rejectUntrustedRequest } from "./_requestGuards.js";
 import { MongoClient, ObjectId } from "mongodb";
 import { google } from "googleapis";
 import { DateTime } from "luxon";
@@ -86,6 +88,14 @@ function buildEventPayload(gig: GigDoc) {
 }
 
 export default async function handler(req: any, res: any) {
+  if (rejectUntrustedRequest(req, res)) return;
+
+  try {
+    requireAdmin(req);
+  } catch (error) {
+    return rejectAuthError(error, res);
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).end(`Method ${req.method} Not Allowed`);

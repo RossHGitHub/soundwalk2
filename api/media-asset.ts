@@ -1,5 +1,6 @@
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { ObjectId } from "mongodb";
+import { rejectUntrustedRequest } from "./_requestGuards.js";
 import {
   getMediaCollection,
   getR2BucketName,
@@ -30,6 +31,8 @@ async function sendObjectBody(res: any, body: any) {
 
 export default async function handler(req: any, res: any) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
     if (req.method !== "GET" && req.method !== "HEAD") {
       res.setHeader("Allow", ["GET", "HEAD"]);
       return res.status(405).json({ error: "Method not allowed" });

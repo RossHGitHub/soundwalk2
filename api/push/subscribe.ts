@@ -1,6 +1,9 @@
 import { savePushSubscription } from "../_push.js";
+import { rejectUntrustedRequest } from "../_requestGuards.js";
 
 export default async function handler(req: any, res: any) {
+  if (rejectUntrustedRequest(req, res)) return;
+
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });

@@ -1,4 +1,5 @@
 import type { Gig, GoogleCalendarFeed, SyncResult } from "../types";
+import { getAdminHeaders } from "./adminAuth";
 
 export async function fetchGigs(): Promise<Gig[]> {
   const res = await fetch("/api/gigs");
@@ -14,7 +15,9 @@ export async function fetchGigs(): Promise<Gig[]> {
 }
 
 export async function fetchGoogleEvents(): Promise<GoogleCalendarFeed> {
-  const res = await fetch("/api/google-events");
+  const res = await fetch("/api/google-events", {
+    headers: getAdminHeaders(),
+  });
   if (!res.ok) {
     throw new Error(`Failed to fetch Google events (${res.status})`);
   }
@@ -49,7 +52,7 @@ export async function saveGig(formData: Gig, currentGig?: Gig | null) {
 
   const res = await fetch("/api/gigs", {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: getAdminHeaders(true),
     body: JSON.stringify(payload),
   });
 
@@ -61,7 +64,10 @@ export async function saveGig(formData: Gig, currentGig?: Gig | null) {
 }
 
 export async function deleteGig(gigId: string) {
-  const res = await fetch(`/api/gigs?id=${gigId}`, { method: "DELETE" });
+  const res = await fetch(`/api/gigs?id=${gigId}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(),
+  });
   if (![200, 204].includes(res.status)) {
     throw new Error("Failed to delete gig");
   }
@@ -70,7 +76,7 @@ export async function deleteGig(gigId: string) {
 export async function runCalendarSync(): Promise<SyncResult> {
   const res = await fetch("/api/gigs-sync", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAdminHeaders(true),
   });
 
   if (!res.ok) {

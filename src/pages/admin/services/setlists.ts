@@ -1,7 +1,10 @@
 import type { SavedSetList } from "../types";
+import { getAdminHeaders } from "./adminAuth";
 
 export async function fetchSetLists(): Promise<SavedSetList[]> {
-  const res = await fetch("/api/setlists");
+  const res = await fetch("/api/setlists", {
+    headers: getAdminHeaders(),
+  });
   if (!res.ok) {
     throw new Error(`Failed to fetch setlists (${res.status})`);
   }
@@ -25,7 +28,7 @@ export async function saveSetList(
 
   const res = await fetch("/api/setlists", {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: getAdminHeaders(true),
     body: JSON.stringify(payload),
   });
 
@@ -39,7 +42,10 @@ export async function saveSetList(
 }
 
 export async function deleteSetList(setListId: string) {
-  const res = await fetch(`/api/setlists?id=${setListId}`, { method: "DELETE" });
+  const res = await fetch(`/api/setlists?id=${setListId}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(),
+  });
   if (![200, 204].includes(res.status)) {
     const errorData = await res.json().catch(() => ({}));
     const message = errorData?.error || "Failed to delete setlist";

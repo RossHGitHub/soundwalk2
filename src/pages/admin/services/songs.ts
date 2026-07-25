@@ -1,7 +1,10 @@
 import type { Song } from "../types";
+import { getAdminHeaders } from "./adminAuth";
 
 export async function fetchSongs(): Promise<Song[]> {
-  const res = await fetch("/api/songs");
+  const res = await fetch("/api/songs", {
+    headers: getAdminHeaders(),
+  });
   if (!res.ok) {
     throw new Error(`Failed to fetch songs (${res.status})`);
   }
@@ -25,7 +28,7 @@ export async function saveSong(formData: Song, currentSong?: Song | null) {
 
   const res = await fetch("/api/songs", {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: getAdminHeaders(true),
     body: JSON.stringify(payload),
   });
 
@@ -39,7 +42,10 @@ export async function saveSong(formData: Song, currentSong?: Song | null) {
 }
 
 export async function deleteSong(songId: string) {
-  const res = await fetch(`/api/songs?id=${songId}`, { method: "DELETE" });
+  const res = await fetch(`/api/songs?id=${songId}`, {
+    method: "DELETE",
+    headers: getAdminHeaders(),
+  });
   if (![200, 204].includes(res.status)) {
     const errorData = await res.json().catch(() => ({}));
     const message = errorData?.error || "Failed to delete song";

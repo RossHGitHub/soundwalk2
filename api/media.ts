@@ -1,5 +1,6 @@
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { requireAdmin } from "./_adminAuth.js";
+import { rejectUntrustedRequest } from "./_requestGuards.js";
 import {
   buildMediaUrl,
   formatTitleFromKey,
@@ -73,6 +74,8 @@ async function listBucketImages() {
 
 export default async function handler(req: any, res: any) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
     const col = await getMediaCollection();
 
     if (req.method === "GET") {

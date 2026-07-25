@@ -1,5 +1,7 @@
 import { MongoClient, ObjectId } from "mongodb";
+import { requireAdmin } from "./_adminAuth.js";
 import { requireEnv } from "./_envGuard.js";
+import { rejectAuthError, rejectUntrustedRequest } from "./_requestGuards.js";
 
 let client: MongoClient | null = null;
 
@@ -45,6 +47,14 @@ function sanitizeSetLists(body: any) {
 
 export default async function handler(req: any, res: any) {
   try {
+    if (rejectUntrustedRequest(req, res)) return;
+
+    try {
+      requireAdmin(req);
+    } catch (error) {
+      return rejectAuthError(error, res);
+    }
+
     const db = await getDb();
     const col = db.collection("setlists");
 

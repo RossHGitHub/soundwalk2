@@ -1,4 +1,6 @@
 import { requireEnv } from './_envGuard.js';
+import { requireAdmin } from './_adminAuth.js';
+import { rejectAuthError, rejectUntrustedRequest } from './_requestGuards.js';
 import { sendPushNotificationToAll } from './_push.js';
 import { MongoClient, ObjectId } from 'mongodb';
 import { google } from 'googleapis';
@@ -101,9 +103,19 @@ async function notifyGigCancelled({
 }
 
 export default async function handler(req: any, res: any) {
+  if (rejectUntrustedRequest(req, res)) return;
+
+  const method = req.method;
+  if (method === "POST" || method === "PUT" || method === "DELETE") {
+    try {
+      requireAdmin(req);
+    } catch (error) {
+      return rejectAuthError(error, res);
+    }
+  }
+
   const db = await getDb();
   const col = db.collection("gigs");
-  const method = req.method;
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
 

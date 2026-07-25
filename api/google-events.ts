@@ -1,5 +1,7 @@
 import { google } from "googleapis";
 import { DateTime } from "luxon";
+import { requireAdmin } from "./_adminAuth.js";
+import { rejectAuthError, rejectUntrustedRequest } from "./_requestGuards.js";
 
 type CalendarFeedEvent = {
   id: string;
@@ -40,6 +42,14 @@ function getCalendarClient() {
 }
 
 export default async function handler(req: any, res: any) {
+  if (rejectUntrustedRequest(req, res)) return;
+
+  try {
+    requireAdmin(req);
+  } catch (error) {
+    return rejectAuthError(error, res);
+  }
+
   const calendarClient = getCalendarClient();
   if (!calendarClient) {
     return res.status(200).json({

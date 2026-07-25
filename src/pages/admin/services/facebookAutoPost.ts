@@ -1,22 +1,10 @@
 import type { FacebookAutoPostRunResult } from "../types";
-
-function getAdminHeaders() {
-  const token = localStorage.getItem("auth-token");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
-}
+import { getAdminHeaders } from "./adminAuth";
 
 export async function runFacebookAutoPost(): Promise<FacebookAutoPostRunResult> {
   const res = await fetch("/api/facebook-auto-post", {
     method: "POST",
-    headers: getAdminHeaders(),
+    headers: getAdminHeaders(true),
     body: JSON.stringify({}),
   });
 
