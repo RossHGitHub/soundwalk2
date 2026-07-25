@@ -1,7 +1,9 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useState } from "react";
 import {
   CalendarDays,
   Clock3,
+  Download,
   Globe2,
   Lock,
   Megaphone,
@@ -12,6 +14,7 @@ import {
 import { DateTime } from "luxon";
 
 import { Button } from "../../../components/ui/button";
+import { generateGigPoster } from "../posterGenerator";
 import type { Gig } from "../types";
 
 type Props = {
@@ -61,7 +64,26 @@ export default function GigDetailsModal({
   gig,
   onEdit,
 }: Props) {
+  const [isGeneratingPoster, setIsGeneratingPoster] = useState(false);
+
   if (!gig) return null;
+
+  async function handleGeneratePoster() {
+    if (!gig) return;
+
+    setIsGeneratingPoster(true);
+    try {
+      await generateGigPoster(gig);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred while generating the poster.";
+      alert(`Failed to generate poster: ${message}`);
+    } finally {
+      setIsGeneratingPoster(false);
+    }
+  }
 
   const statusBadges = [
     gig.privateEvent ? { label: "Private Event", icon: Lock } : null,
@@ -116,7 +138,16 @@ export default function GigDetailsModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                onClick={handleGeneratePoster}
+                disabled={isGeneratingPoster}
+                className="rounded-xl border border-[#2f5b64] bg-[#12313a] text-[#d9f7f2] hover:bg-[#173f49]"
+              >
+                <Download className="h-4 w-4" />
+                {isGeneratingPoster ? "Generating..." : "Generate poster"}
+              </Button>
               <Button
                 type="button"
                 onClick={() => onEdit(gig)}

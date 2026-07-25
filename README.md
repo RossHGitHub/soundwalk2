@@ -95,6 +95,18 @@ Recommended Cloudflare-side settings:
 - Enable Cloudflare Hotlink Protection on the site zone if the media is served behind your main domain.
 - If you have access to Bot Fight Mode or stronger WAF controls on your plan, enable them for `/api/media` and `/api/media-asset`.
 
+## Poster Generator Setup
+
+The admin poster generator reads `sw-poster-template.png` from R2 through `GET /api/poster-template`, draws the gig venue, date, and start time into the lower half in the browser, then downloads a PNG.
+
+By default it tries `sw-poster-template.png` in the `Utilities` bucket first, then falls back to `sw-poster-template.png` and `Utilities/sw-poster-template.png` inside `R2_BUCKET`. You can override the template location with:
+
+```bash
+POSTER_TEMPLATE_BUCKET=""
+POSTER_TEMPLATE_KEY=""
+POSTER_TEMPLATE_PREFIX=""
+```
+
 ## Facebook Auto-Posting Setup
 
 The Facebook auto-post feature expects these server-side environment variables:
