@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google, type calendar_v3 } from "googleapis";
 import { DateTime } from "luxon";
 import { requireAdmin } from "./_adminAuth.js";
 import { rejectAuthError, rejectUntrustedRequest } from "./_requestGuards.js";
@@ -69,17 +69,19 @@ export default async function handler(req: any, res: any) {
   const { client: calendar, serviceAccountEmail } = calendarClient;
 
   const calendarIds = Array.from(
-    new Set([
-      process.env.GOOGLE_CALENDAR_ID,
-      "soundwalkband@gmail.com",
-      "soundwalkgigs@gmail.com",
-    ].filter(Boolean))
+    new Set(
+      [
+        process.env.GOOGLE_CALENDAR_ID,
+        "soundwalkband@gmail.com",
+        "soundwalkgigs@gmail.com",
+      ].filter(Boolean),
+    ),
   ) as string[];
   const { timeMin, timeMax } = req.query;
 
   const now = DateTime.now().setZone("Europe/London");
-  const tMin = (timeMin as string) || now.minus({ months: 1 }).toISO();
-  const tMax = (timeMax as string) || now.plus({ months: 6 }).toISO();
+  const tMin = (timeMin as string) || now.minus({ months: 1 }).toISO()!;
+  const tMax = (timeMax as string) || now.plus({ months: 6 }).toISO()!;
 
   const toDedupKey = (event: CalendarFeedEvent) =>
     [
@@ -92,16 +94,24 @@ export default async function handler(req: any, res: any) {
   try {
     const sourceStatuses: CalendarSourceStatus[] = [];
     const results = await Promise.allSettled(
-      calendarIds.map((calendarId) =>
-        calendar.events.list({
-          calendarId,
-          timeMin: tMin,
-          timeMax: tMax,
-          singleEvents: true,
-          orderBy: "startTime",
-          maxResults: 2500,
-        } as any)
-      )
+      calendarIds.map(async (calendarId) => {
+        const items: calendar_v3.Schema$Event[] = [];
+        let pageToken: string | undefined;
+        do {
+          const response = await calendar.events.list({
+            calendarId,
+            timeMin: tMin,
+            timeMax: tMax,
+            singleEvents: true,
+            orderBy: "startTime",
+            maxResults: 2500,
+            pageToken,
+          });
+          items.push(...(response.data.items || []));
+          pageToken = response.data.nextPageToken || undefined;
+        } while (pageToken);
+        return items;
+      }),
     );
 
     const deduped = new Map<string, CalendarFeedEvent>();
@@ -130,15 +140,20 @@ export default async function handler(req: any, res: any) {
         return;
       }
 
-      const items = (result.value.data.items || [])
-        .map((e: any) => {
+      const items = result.value
+        .filter(
+          (e) => e.status !== "cancelled" && e.transparency !== "transparent",
+        )
+        .map((e) => {
           const hasAllDay = !!e.start?.date || !!e.end?.date;
           const startISO = hasAllDay
-            ? DateTime.fromISO(e.start!.date!).startOf("day").toISO()
-            : e.start?.dateTime ?? null;
+            ? DateTime.fromISO(e.start!.date!, { zone: "Europe/London" })
+                .startOf("day")
+                .toISO()
+            : (e.start?.dateTime ?? null);
           const endISO = hasAllDay
-            ? DateTime.fromISO(e.end!.date!).toISO()
-            : e.end?.dateTime ?? null;
+            ? DateTime.fromISO(e.end!.date!, { zone: "Europe/London" }).toISO()
+            : (e.end?.dateTime ?? null);
 
           if (!startISO || !endISO) return null;
 
@@ -168,7 +183,7 @@ export default async function handler(req: any, res: any) {
     });
 
     const dedupedItems = Array.from(deduped.values()).sort((a, b) =>
-      a.startISO.localeCompare(b.startISO)
+      a.startISO.localeCompare(b.startISO),
     );
 
     res.status(200).json({
@@ -197,7 +212,9 @@ export default async function handler(req: any, res: any) {
           ok: false,
           eventCount: 0,
           error:
-            err instanceof Error ? err.message : "Unknown Google Calendar error",
+            err instanceof Error
+              ? err.message
+              : "Unknown Google Calendar error",
         })),
         dedupedCount: 0,
         fetchError:

@@ -1,6 +1,13 @@
 import { type ChangeEvent, type FormEvent } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  LoaderCircle,
+  MapPin,
+  X,
+} from "lucide-react";
+import { DateTime } from "luxon";
 import { Button } from "../../../components/ui/button";
 import { Checkbox } from "../../../components/ui/checkbox";
 import { Input } from "../../../components/ui/input";
@@ -16,7 +23,7 @@ type Props = {
   formData: Gig;
   venueSuggestions: string[];
   onChange: (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => void;
   onVenueSuggestionClick: (venue: string) => void;
   onSave: (e: FormEvent) => void;
@@ -24,7 +31,6 @@ type Props = {
   onTogglePrivate: (checked: boolean) => void;
   onTogglePosters: (checked: boolean) => void;
 };
-
 export default function GigModal({
   isOpen,
   onOpenChange,
@@ -39,324 +45,287 @@ export default function GigModal({
   onTogglePrivate,
   onTogglePosters,
 }: Props) {
-  const feeNumber = Number(formData.fee) || 0;
+  const fee = Number(formData.fee) || 0;
   const splitSum =
-    (Number(formData.paymentSplitRoss) || 0) +
-    (Number(formData.paymentSplitKeith) || 0) +
-    (Number(formData.paymentSplitBarry) || 0);
+    Number(formData.paymentSplitRoss || 0) +
+    Number(formData.paymentSplitKeith || 0) +
+    Number(formData.paymentSplitBarry || 0);
   const splitMismatch =
-    formData.paymentSplit === "Customise" && Math.abs(splitSum - feeNumber) > 0.01;
-  const paymentMethodMissing = !formData.paymentMethod;
-
+    formData.paymentSplit === "Customise" && Math.abs(splitSum - fee) > 0.01;
+  const date = DateTime.fromISO(formData.date);
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!saving) onOpenChange(open);
+      }}
+    >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-[1px]" />
-        <DialogPrimitive.Content
-          className="fixed z-[100] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-                     w-[92vw] sm:w-2/3 max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-900 text-white rounded-lg border border-white/10
-                     shadow-xl p-5 sm:p-6 focus:outline-none"
-        >
-          {saving && (
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] grid place-items-center rounded-lg">
-              <div className="flex items-center gap-3">
-                <svg
-                  className="animate-spin h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  />
-                </svg>
-                <span>Saving…</span>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-4 flex items-start justify-between gap-4">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm" />
+        <DialogPrimitive.Content className="admin-theme booking-dialog">
+          <header className="booking-header">
             <div>
-              <DialogPrimitive.Title asChild>
-                <h2 className="text-xl font-semibold">
-                  {currentGig ? "Edit Gig" : "Add Gig"}
-                </h2>
+              <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">
+                Soundwalk / Bookings
+              </p>
+              <DialogPrimitive.Title className="mt-2 text-2xl font-semibold tracking-tight">
+                {currentGig ? "Edit gig" : "Create gig"}
               </DialogPrimitive.Title>
-              <DialogPrimitive.Description asChild>
-                <p className="text-sm text-white/70">
-                  {currentGig
-                    ? "Update your gig details below."
-                    : "Enter details for your new gig."}
-                </p>
+              <DialogPrimitive.Description className="mt-2 text-sm text-white/55">
+                {currentGig
+                  ? "Keep the show details up to date."
+                  : "Turn the date into your next show."}
               </DialogPrimitive.Description>
             </div>
-            <div className="flex items-center gap-2">
-              <DialogPrimitive.Close
-                className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none"
-                aria-label="Close"
-              >
-                <X className="h-5 w-5" />
-              </DialogPrimitive.Close>
-            </div>
-          </div>
-
-          <form onSubmit={onSave} className="space-y-6" aria-busy={saving}>
-            <div className="space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">
-                Gig Details
-              </h3>
-              <div className="relative">
-                <Label htmlFor="venue">Venue</Label>
-                <Input
-                  id="venue"
-                  name="venue"
-                  value={formData.venue}
-                  onChange={onChange}
-                  autoComplete="off"
-                />
-                {venueSuggestions.length > 0 && (
-                  <ul className="absolute top-full left-0 right-0 bg-white text-black border mt-1 z-[110] rounded-md overflow-hidden">
-                    {venueSuggestions.map((venue) => (
-                      <li
-                        key={venue}
-                        onClick={() => onVenueSuggestionClick(venue)}
-                        className="px-3 py-1 cursor-pointer hover:bg-gray-200"
-                      >
-                        {venue}
-                      </li>
-                    ))}
-                  </ul>
+            <DialogPrimitive.Close
+              disabled={saving}
+              className="grid size-11 shrink-0 place-items-center rounded-full border border-white/15"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </DialogPrimitive.Close>
+          </header>
+          <form onSubmit={onSave} aria-busy={saving} className="booking-form">
+            <fieldset disabled={saving} className="booking-fields">
+              <div className="booking-date-banner">
+                <CalendarDays size={20} />
+                <div>
+                  <span className="text-[10px] uppercase tracking-widest text-white/45">
+                    The date
+                  </span>
+                  <p className="mt-1 text-sm font-medium">
+                    {date.isValid
+                      ? date.toFormat("cccc d LLLL yyyy")
+                      : "Choose a date below"}
+                  </p>
+                </div>
+              </div>
+              <section className="booking-section">
+                <h3>
+                  <MapPin size={15} />
+                  The essentials
+                </h3>
+                <div className="relative">
+                  <Label htmlFor="venue">
+                    Venue <span className="text-white/40">*</span>
+                  </Label>
+                  <Input
+                    autoFocus
+                    required
+                    id="venue"
+                    name="venue"
+                    autoComplete="off"
+                    placeholder="Where are we playing?"
+                    value={formData.venue}
+                    onChange={onChange}
+                  />
+                  {venueSuggestions.length > 0 && (
+                    <ul className="absolute inset-x-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded-xl border border-white/15 bg-[#182036] shadow-xl">
+                      {venueSuggestions.map((venue) => (
+                        <li key={venue}>
+                          <button
+                            type="button"
+                            className="w-full px-4 py-3 text-left text-sm hover:bg-white/10"
+                            onClick={() => onVenueSuggestionClick(venue)}
+                          >
+                            {venue}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="min-w-0">
+                    <Label htmlFor="date">Date *</Label>
+                    <Input
+                      required
+                      type="date"
+                      id="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={onChange}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <Label htmlFor="startTime">Start time</Label>
+                    <Input
+                      type="time"
+                      id="startTime"
+                      name="startTime"
+                      value={formData.startTime}
+                      onChange={onChange}
+                    />
+                  </div>
+                </div>
+              </section>
+              <section className="booking-section">
+                <h3>Fee & payment</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="fee">Agreed fee (£)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      id="fee"
+                      name="fee"
+                      placeholder="0.00"
+                      value={formData.fee}
+                      onChange={onChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="paymentMethod">Payment method *</Label>
+                    <select
+                      required
+                      id="paymentMethod"
+                      name="paymentMethod"
+                      value={formData.paymentMethod || ""}
+                      onChange={onChange}
+                    >
+                      <option value="">Choose a method</option>
+                      <option value="Cash">Cash</option>
+                      <option value="Bank Transfer">Bank transfer</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="paymentSplit">Split between the band</Label>
+                  <select
+                    id="paymentSplit"
+                    name="paymentSplit"
+                    value={formData.paymentSplit || "Even"}
+                    onChange={onChange}
+                  >
+                    <option value="Even">Even split</option>
+                    <option value="Customise">Custom split</option>
+                  </select>
+                </div>
+                {formData.paymentSplit === "Customise" ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-3">
+                      {(["Ross", "Keith", "Barry"] as const).map((person) => {
+                        const name = `paymentSplit${person}` as const;
+                        return (
+                          <div className="min-w-0" key={person}>
+                            <Label htmlFor={name}>{person} (£)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              id={name}
+                              name={name}
+                              value={formData[name] ?? ""}
+                              onChange={onChange}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {splitMismatch && (
+                      <p role="status" className="text-sm text-amber-200">
+                        Split total £{splitSum.toFixed(2)} must match the £
+                        {fee.toFixed(2)} fee.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-white/50">
+                    Ross, Keith and Barry · £{Math.round(fee / 3)} each (rounded
+                    to whole pounds).
+                  </p>
                 )}
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    type="date"
-                    id="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={onChange}
-                  />
+              </section>
+              <details className="booking-extras">
+                <summary>
+                  Notes & promotion{" "}
+                  <span className="ml-auto text-xs font-normal text-white/40">
+                    Optional
+                  </span>
+                  <ChevronDown size={16} />
+                </summary>
+                <div className="booking-section">
+                  <div>
+                    <Label htmlFor="internalNotes">Band notes</Label>
+                    <Textarea
+                      id="internalNotes"
+                      name="internalNotes"
+                      placeholder="Access, timings, requests…"
+                      value={formData.internalNotes || ""}
+                      onChange={onChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="description">Public description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={onChange}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    type="time"
-                    id="startTime"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={onChange}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">
-                In-Depth Details
-              </h3>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={onChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="internalNotes">Internal Notes</Label>
-                <Input
-                  id="internalNotes"
-                  name="internalNotes"
-                  value={formData.internalNotes ?? ""}
-                  onChange={onChange}
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="postersNeeded"
-                    name="postersNeeded"
-                    checked={!!formData.postersNeeded}
-                    onCheckedChange={(checked) => onTogglePosters(!!checked)}
-                  />
-                  <Label htmlFor="postersNeeded">Posters Needed</Label>
-                </div>
-                <div className="flex items-center space-x-2">
+              </details>
+              <div className="booking-toggles">
+                <label>
                   <Checkbox
                     id="privateEvent"
-                    name="privateEvent"
                     checked={!!formData.privateEvent}
-                    onCheckedChange={(checked) => onTogglePrivate(!!checked)}
+                    onCheckedChange={(value) => onTogglePrivate(!!value)}
                   />
-                  <Label htmlFor="privateEvent">Private Event</Label>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 rounded-lg border border-white/10 bg-white/5 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">
-                Payment Details
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="fee">Fee (£)</Label>
-                  <Input
-                    type="number"
-                    id="fee"
-                    name="fee"
-                    value={formData.fee}
-                    onChange={onChange}
+                  <span>
+                    Private event
+                    <small>Keep this off the public gig listings</small>
+                  </span>
+                </label>
+                <label>
+                  <Checkbox
+                    id="postersNeeded"
+                    checked={!!formData.postersNeeded}
+                    onCheckedChange={(value) => onTogglePosters(!!value)}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  <select
-                    id="paymentMethod"
-                    name="paymentMethod"
-                    value={formData.paymentMethod ?? ""}
-                    onChange={onChange}
-                    className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                  >
-                    <option value="">Select a method</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank Transfer">Bank Transfer</option>
-                  </select>
-                  {paymentMethodMissing && (
-                    <p className="text-sm text-red-400 mt-1">
-                      Payment method is required.
-                    </p>
-                  )}
-                </div>
+                  <span>
+                    Posters needed<small>Flag this show for promotion</small>
+                  </span>
+                </label>
               </div>
-
-              <div>
-                <Label htmlFor="paymentSplit">Payment Split</Label>
-                <select
-                  id="paymentSplit"
-                  name="paymentSplit"
-                  value={formData.paymentSplit ?? "Even"}
-                  onChange={onChange}
-                  className="border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                >
-                  <option value="Even">Even</option>
-                  <option value="Customise">Customise</option>
-                </select>
-              </div>
-
-              {formData.paymentSplit === "Customise" && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor="paymentSplitRoss" className="min-w-16">
-                      Ross:
-                    </Label>
-                    <span className="text-white/70">£</span>
-                    <Input
-                      type="number"
-                      id="paymentSplitRoss"
-                      name="paymentSplitRoss"
-                      value={formData.paymentSplitRoss ?? ""}
-                      onChange={onChange}
-                      className="max-w-32"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor="paymentSplitKeith" className="min-w-16">
-                      Keith:
-                    </Label>
-                    <span className="text-white/70">£</span>
-                    <Input
-                      type="number"
-                      id="paymentSplitKeith"
-                      name="paymentSplitKeith"
-                      value={formData.paymentSplitKeith ?? ""}
-                      onChange={onChange}
-                      className="max-w-32"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Label htmlFor="paymentSplitBarry" className="min-w-16">
-                      Barry:
-                    </Label>
-                    <span className="text-white/70">£</span>
-                    <Input
-                      type="number"
-                      id="paymentSplitBarry"
-                      name="paymentSplitBarry"
-                      value={formData.paymentSplitBarry ?? ""}
-                      onChange={onChange}
-                      className="max-w-32"
-                    />
-                  </div>
-                  {splitMismatch && (
-                    <p className="text-sm text-red-400">
-                      Split total (£{splitSum.toFixed(2)}) must match fee (£
-                      {feeNumber.toFixed(2)}).
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between pt-2">
-              {currentGig && (
+            </fieldset>
+            <footer className="booking-footer">
+              {currentGig ? (
                 <Button
                   type="button"
-                  variant="destructive"
-                  onClick={onDelete}
+                  variant="ghost"
+                  className="text-red-300"
                   disabled={saving}
+                  onClick={onDelete}
                 >
-                  Delete
+                  Delete gig
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={saving}
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
                 </Button>
               )}
-              <div className="ml-auto">
-                <Button
-                  type="submit"
-                  disabled={saving || splitMismatch || paymentMethodMissing}
-                >
-                  {saving && (
-                    <svg
-                      className="animate-spin h-4 w-4 mr-2"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                  )}
-                  {saving ? "Saving..." : currentGig ? "Save Changes" : "Add Gig"}
-                </Button>
-              </div>
-            </div>
+              <Button
+                type="submit"
+                disabled={saving || splitMismatch}
+                className="bg-white px-6 text-[#050816] hover:bg-white/90"
+              >
+                {saving && <LoaderCircle size={16} className="animate-spin" />}
+                {saving
+                  ? "Saving…"
+                  : currentGig
+                    ? "Save changes"
+                    : "Create gig"}
+              </Button>
+            </footer>
           </form>
-
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

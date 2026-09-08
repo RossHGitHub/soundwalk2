@@ -87,6 +87,7 @@ function LayoutShell() {
   const location = useLocation()
   const { getSlot } = useSiteMedia()
   const logoUrl = getSlot("layout.logo")?.imageUrl || logoTransparent
+  const isAdmin = location.pathname === "/admin"
   const isHome = location.pathname === "/"
   const [scrolled, setScrolled] = useState(false)
 
@@ -104,7 +105,7 @@ function LayoutShell() {
     <div className="flex min-h-screen flex-col bg-background">
       <ScrollToTop />
 
-      <header
+      {!isAdmin && <header
         className={cn(
           "fixed inset-x-0 top-0 z-50 px-3 transition-all duration-500 sm:px-5",
           isHome && !scrolled ? "pt-3 sm:pt-5" : "pt-2.5 sm:pt-3"
@@ -284,13 +285,13 @@ function LayoutShell() {
             </Sheet>
           </div>
         </div>
-      </header>
+      </header>}
 
-      <main className={cn("flex-1", isHome ? "" : "pt-24 md:pt-28")}>
+      <main className={cn("flex-1", isHome || isAdmin ? "" : "pt-24 md:pt-28")}>
         <Outlet />
       </main>
 
-      <footer className="border-t border-white/10 bg-[#050816] px-6 py-10 text-white sm:px-8 lg:px-12">
+      {!isAdmin && <footer className="border-t border-white/10 bg-[#050816] px-6 py-10 text-white sm:px-8 lg:px-12">
         <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.2fr_0.8fr] md:items-end">
           <div className="space-y-4 text-center md:text-left">
             <Link to="/" className="inline-flex justify-center md:justify-start">
@@ -357,7 +358,7 @@ function LayoutShell() {
             </div>
           </div>
         </div>
-      </footer>
+      </footer>}
     </div>
   )
 }

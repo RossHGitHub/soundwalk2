@@ -372,7 +372,7 @@ export default function PayslipsSection({ gigs }: Props) {
 
       <div className="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start">
         <aside className="lg:flex-none lg:w-[220px] shrink-0">
-          <div className="w-[220px] rounded-2xl border border-white/10 bg-gray-950/70 p-4">
+          <div className="w-full rounded-2xl border border-white/10 bg-gray-950/70 p-4">
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
               {monthsByYear.length === 0 && (
                 <div className="text-sm text-white/60">No gigs found.</div>
@@ -398,9 +398,9 @@ export default function PayslipsSection({ gigs }: Props) {
                             key={month.key}
                             type="button"
                             onClick={() => toggleMonth(month.key)}
-                            className={`w-full rounded-md px-2 py-1 text-left text-sm transition ${
+                            className={`min-h-11 w-full rounded-md px-2 py-1 text-left text-sm transition ${
                               isActive
-                                ? "bg-emerald-500/20 text-emerald-200"
+                                ? "bg-white/10 text-white"
                                 : "text-white/70 hover:bg-white/10"
                             }`}
                           >
@@ -416,7 +416,7 @@ export default function PayslipsSection({ gigs }: Props) {
           </div>
         </aside>
 
-        <section className="flex-1">
+        <section className="min-w-0 flex-1">
           <div className="rounded-2xl border border-white/10 bg-gray-950/70 p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="text-xs uppercase tracking-[0.2em] text-white/50">

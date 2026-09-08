@@ -121,7 +121,37 @@ export default async function handler(req: any, res: any) {
 
   // GET gigs
   if (method === "GET") {
-    const gigs = await col.find().sort({ date: 1 }).toArray();
+    let isAdminRequest = false;
+    try {
+      requireAdmin(req);
+      isAdminRequest = true;
+    } catch {}
+
+    const query = isAdminRequest
+      ? {}
+      : {
+          privateEvent: { $ne: true },
+          date: {
+            $gte: DateTime.now()
+              .setZone("Europe/London")
+              .startOf("day")
+              .toJSDate(),
+          },
+        };
+    const options = isAdminRequest
+      ? undefined
+      : {
+          projection: {
+            venue: 1,
+            date: 1,
+            startTime: 1,
+            description: 1,
+            privateEvent: 1,
+            postersNeeded: 1,
+          },
+        };
+
+    const gigs = await col.find(query, options).sort({ date: 1 }).toArray();
     return res.status(200).json(
       gigs.map((g) => ({
         ...g,

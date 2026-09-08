@@ -104,7 +104,7 @@ export default function GigDetailsModal({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/65 backdrop-blur-[2px]" />
         <DialogPrimitive.Content
-          className="fixed left-1/2 top-1/2 z-[100] max-h-[90vh] w-[92vw] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(81,183,172,0.14),_transparent_30%),linear-gradient(180deg,#101c24_0%,#0a1218_100%)] p-5 text-white shadow-[0_30px_90px_rgba(0,0,0,0.45)] focus:outline-none sm:p-6"
+          className="admin-theme admin-dialog"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">

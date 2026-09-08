@@ -39,7 +39,7 @@ export default function RevenueRundownSection({
 }: Props) {
   return (
     <div className="mt-6 space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="flex flex-wrap gap-2">
           {(
             [
@@ -52,6 +52,7 @@ export default function RevenueRundownSection({
             <Button
               key={option.key}
               size="sm"
+              aria-pressed={granularity === option.key}
               variant={granularity === option.key ? "default" : "outline"}
               onClick={() => onGranularityChange(option.key)}
             >
@@ -61,6 +62,7 @@ export default function RevenueRundownSection({
           <Button
             size="sm"
             variant={showRange ? "default" : "outline"}
+            aria-expanded={showRange}
             onClick={onToggleRange}
           >
             Date range
@@ -101,11 +103,11 @@ export default function RevenueRundownSection({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="bg-gray-900/70 border-white/10">
           <CardHeader>
-            <CardTitle>Total revenue</CardTitle>
-            <CardDescription>Sum across the selected window</CardDescription>
+            <CardTitle>Booked revenue</CardTitle>
+            <CardDescription>Booked fees, including upcoming gigs</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold text-emerald-300">
+            <div className="text-3xl font-semibold text-white">
               £{summary.totalRevenue.toFixed(2)}
             </div>
           </CardContent>
@@ -150,10 +152,10 @@ export default function RevenueRundownSection({
           <CardTitle>Revenue trend</CardTitle>
           <CardDescription>
             Showing {summary.chartData.length || 0}{" "}
-            {granularity === "all" ? "period" : "periods"}
+            {summary.chartData.length === 1 ? "period" : "periods"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="h-[320px]">
+        <CardContent className="h-[320px] min-w-0 overflow-hidden">
           {summary.chartData.length === 0 ? (
             <div className="h-full grid place-items-center text-sm text-white/60">
               No revenue data for the selected range.
@@ -172,7 +174,7 @@ export default function RevenueRundownSection({
                   cursor={{ fill: "transparent" }}
                   formatter={(value: number) => [`£${value.toFixed(2)}`, "Revenue"]}
                 />
-                <Bar dataKey="total" fill="#10b981" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" fill="#a5b4fc" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

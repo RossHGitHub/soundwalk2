@@ -2,7 +2,9 @@ import type { Gig, GoogleCalendarFeed, SyncResult } from "../types";
 import { getAdminHeaders } from "./adminAuth";
 
 export async function fetchGigs(): Promise<Gig[]> {
-  const res = await fetch("/api/gigs");
+  const res = await fetch("/api/gigs", {
+    headers: getAdminHeaders(),
+  });
   if (!res.ok) {
     throw new Error(`Failed to fetch gigs (${res.status})`);
   }
@@ -14,8 +16,12 @@ export async function fetchGigs(): Promise<Gig[]> {
   }));
 }
 
-export async function fetchGoogleEvents(): Promise<GoogleCalendarFeed> {
-  const res = await fetch("/api/google-events", {
+export async function fetchGoogleEvents(range?: {
+  timeMin: string;
+  timeMax: string;
+}): Promise<GoogleCalendarFeed> {
+  const query = range ? `?${new URLSearchParams(range)}` : "";
+  const res = await fetch(`/api/google-events${query}`, {
     headers: getAdminHeaders(),
   });
   if (!res.ok) {

@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import Hero from "../components/Hero";
-import SettingsAsset from "../assets/img/settings_asset.jpg";
+import "./admin/admin.css";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
 
@@ -12,7 +11,6 @@ import type {
   AdminSection,
   FacebookAutoPostRunResult,
   Gig,
-  GoogleCalendarFeed,
   MediaItem,
   MediaSyncResult,
   SavedSetList,
@@ -22,13 +20,9 @@ import type {
   SyncResult,
 } from "./admin/types";
 import { matchesSearch } from "./admin/gigs";
-import {
-  buildRevenueSummary,
-  type RevenueGranularity,
-} from "./admin/revenue";
+import { buildRevenueSummary, type RevenueGranularity } from "./admin/revenue";
 import {
   fetchGigs as fetchGigsFromApi,
-  fetchGoogleEvents,
   saveGig as saveGigApi,
   deleteGig as deleteGigApi,
   runCalendarSync as runCalendarSyncApi,
@@ -99,6 +93,7 @@ export default function Admin() {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [siteMediaSlots, setSiteMediaSlots] = useState<SiteMediaSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gigsError, setGigsError] = useState(false);
   const [songsLoading, setSongsLoading] = useState(true);
   const [savedSetListsLoading, setSavedSetListsLoading] = useState(true);
   const [mediaLoading, setMediaLoading] = useState(true);
@@ -132,32 +127,24 @@ export default function Admin() {
   const [songSaving, setSongSaving] = useState(false);
   const [setListSaving, setSetListSaving] = useState(false);
   const [mediaSyncing, setMediaSyncing] = useState(false);
-  const [mediaSyncResult, setMediaSyncResult] = useState<MediaSyncResult | null>(null);
+  const [mediaSyncResult, setMediaSyncResult] =
+    useState<MediaSyncResult | null>(null);
   const [mediaSyncError, setMediaSyncError] = useState<string | null>(null);
-  const [siteMediaSavingKey, setSiteMediaSavingKey] = useState<string | null>(null);
+  const [siteMediaSavingKey, setSiteMediaSavingKey] = useState<string | null>(
+    null,
+  );
   const [facebookPosting, setFacebookPosting] = useState(false);
   const [facebookPostResult, setFacebookPostResult] =
     useState<FacebookAutoPostRunResult | null>(null);
-  const [facebookPostError, setFacebookPostError] = useState<string | null>(null);
-
-  // Always include Google Calendar events
-  const [googleFeed, setGoogleFeed] = useState<GoogleCalendarFeed>({
-    items: [],
-    diagnostics: {
-      serviceAccountEmail: null,
-      credentialsConfigured: null,
-      timeMin: null,
-      timeMax: null,
-      sources: [],
-      dedupedCount: 0,
-      fetchError: null,
-    },
-  });
+  const [facebookPostError, setFacebookPostError] = useState<string | null>(
+    null,
+  );
 
   // Search state
   const [search, setSearch] = useState("");
-  const [activeSection, setActiveSection] =
-    useState<AdminSection>(() => parseAdminSection(searchParams.get("section")));
+  const [activeSection, setActiveSection] = useState<AdminSection>(() =>
+    parseAdminSection(searchParams.get("section")),
+  );
   const [revenueGranularity, setRevenueGranularity] =
     useState<RevenueGranularity>("monthly");
   const [showRevenueRange, setShowRevenueRange] = useState(false);
@@ -221,39 +208,15 @@ export default function Admin() {
     });
   }, [deepLinkedGigId, gigs, isDetailsModalOpen, loading]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchGoogleEvents();
-        setGoogleFeed(data);
-      } catch (error) {
-        setGoogleFeed({
-          items: [],
-          diagnostics: {
-            serviceAccountEmail: null,
-            credentialsConfigured: null,
-            timeMin: null,
-            timeMax: null,
-            sources: [],
-            dedupedCount: 0,
-            fetchError:
-              error instanceof Error
-                ? error.message
-                : "Unknown error loading /api/google-events",
-          },
-        });
-      }
-    })();
-  }, []);
-
   async function fetchGigs() {
     setLoading(true);
     try {
       const data = await fetchGigsFromApi();
       setGigs(data);
+      setGigsError(false);
     } catch (error) {
       console.error(error);
-      setGigs([]);
+      setGigsError(true);
     } finally {
       setLoading(false);
     }
@@ -316,7 +279,8 @@ export default function Admin() {
       return {
         ...gig,
         description:
-          gig.description ?? (gig._externalGoogleId ? gig.internalNotes ?? "" : ""),
+          gig.description ??
+          (gig._externalGoogleId ? (gig.internalNotes ?? "") : ""),
         _id: gig._id,
         internalNotes: gig.internalNotes ?? "",
         paymentMethod: gig.paymentMethod ?? "",
@@ -422,18 +386,20 @@ export default function Admin() {
   }
 
   function handleChange(
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) {
     const { name, value, type } = e.target;
     setFormData((prev) => {
       const updatedData = {
         ...prev,
-        [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+        [name]:
+          type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
       };
 
       const nextPaymentSplit =
-        name === "paymentSplit" ? value : updatedData.paymentSplit ?? "Even";
-      const nextFee = name === "fee" ? Number(value) || 0 : Number(updatedData.fee) || 0;
+        name === "paymentSplit" ? value : (updatedData.paymentSplit ?? "Even");
+      const nextFee =
+        name === "fee" ? Number(value) || 0 : Number(updatedData.fee) || 0;
       if (nextPaymentSplit === "Even") {
         const evenSplit = Math.round(nextFee / 3);
         updatedData.paymentSplitRoss = evenSplit;
@@ -445,7 +411,7 @@ export default function Admin() {
         if (value.length > 0) {
           const uniqueVenues = Array.from(new Set(gigs.map((g) => g.venue)));
           const suggestions = uniqueVenues.filter((v) =>
-            v.toLowerCase().startsWith(value.toLowerCase())
+            v.toLowerCase().startsWith(value.toLowerCase()),
           );
           setVenueSuggestions(suggestions);
         } else {
@@ -456,7 +422,9 @@ export default function Admin() {
     });
   }
 
-  function handleSongChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleSongChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) {
     const { name, value, type } = e.target;
     setSongFormData((prev) => ({
       ...prev,
@@ -525,7 +493,9 @@ export default function Admin() {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : "An error occurred during the request.";
+        error instanceof Error
+          ? error.message
+          : "An error occurred during the request.";
       alert(`Failed to save gig: ${message}`);
     } finally {
       setSaving(false);
@@ -566,7 +536,7 @@ export default function Admin() {
           ...songFormData,
           duration: normalizeDurationValue(songFormData.duration),
         },
-        currentSong
+        currentSong,
       );
       await fetchSongs();
       if (selectedSong?._id && savedSong?._id === selectedSong._id) {
@@ -576,7 +546,9 @@ export default function Admin() {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : "An error occurred during the request.";
+        error instanceof Error
+          ? error.message
+          : "An error occurred during the request.";
       alert(`Failed to save song: ${message}`);
     } finally {
       setSongSaving(false);
@@ -585,7 +557,8 @@ export default function Admin() {
 
   async function handleDeleteSong() {
     if (!currentSong?._id) return;
-    if (!confirm(`Are you sure you want to delete "${currentSong.title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${currentSong.title}"?`))
+      return;
 
     try {
       await deleteSongApi(currentSong._id);
@@ -596,14 +569,16 @@ export default function Admin() {
     } catch (error) {
       console.error(error);
       const message =
-        error instanceof Error ? error.message : "An error occurred during the request.";
+        error instanceof Error
+          ? error.message
+          : "An error occurred during the request.";
       alert(`Failed to delete song: ${message}`);
     }
   }
 
   async function handleSaveSetList(
     payload: SavedSetList,
-    currentSetListId?: string | null
+    currentSetListId?: string | null,
   ) {
     setSetListSaving(true);
     try {
@@ -653,6 +628,9 @@ export default function Admin() {
 
   const todayISO = new Date(new Date().toISOString().slice(0, 10)); // midnight local
   const futureOnly = gigs.filter((g) => new Date(g.date) >= todayISO);
+  const nextGig = [...futureOnly].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  )[0];
   const filteredGigs = showHistoricGigs ? gigs : futureOnly;
   const displayedGigs = filteredGigs.filter((g) => matchesSearch(g, search));
 
@@ -667,7 +645,7 @@ export default function Admin() {
       setSyncResult(data);
     } catch (error) {
       setSyncError(
-        error instanceof Error ? error.message : "Unknown error running sync"
+        error instanceof Error ? error.message : "Unknown error running sync",
       );
     } finally {
       setSyncing(false);
@@ -686,7 +664,9 @@ export default function Admin() {
       await fetchSiteMediaSlots();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unknown error running media sync";
+        error instanceof Error
+          ? error.message
+          : "Unknown error running media sync";
       setMediaSyncError(message);
     } finally {
       setMediaSyncing(false);
@@ -713,7 +693,9 @@ export default function Admin() {
       setFacebookPostResult(result);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unknown error running Facebook auto-post";
+        error instanceof Error
+          ? error.message
+          : "Unknown error running Facebook auto-post";
       setFacebookPostError(message);
     } finally {
       setFacebookPosting(false);
@@ -727,15 +709,15 @@ export default function Admin() {
       ? "Set List Builder"
       : activeSection === "site-images"
         ? "Site Images"
-      : activeSection === "gigs-list"
-      ? "Gig Listings"
-      : activeSection === "gigs-calendar"
-        ? "Calendar"
-        : activeSection === "payments-revenue"
-          ? "Revenue Rundown"
-          : activeSection === "payments-payslips"
-            ? "Payslips"
-          : "Backend Tools";
+        : activeSection === "gigs-list"
+          ? "Gig Listings"
+          : activeSection === "gigs-calendar"
+            ? "Calendar"
+            : activeSection === "payments-revenue"
+              ? "Revenue Rundown"
+              : activeSection === "payments-payslips"
+                ? "Payslips"
+                : "Backend Tools";
 
   const revenueSummary = buildRevenueSummary({
     gigs,
@@ -769,193 +751,229 @@ export default function Admin() {
         path="/admin"
         robots="noindex,nofollow"
       />
-      <div className="max-w-6xl mx-auto p-6">
-        <Hero image={SettingsAsset} title="Admin Panel" />
-
-      <div ref={menuRef} className="scroll-mt-[125px]">
+      <div className="admin-theme admin-shell">
         <AdminMenuBar
+          onLogout={handleLogout}
           activeSection={activeSection}
           pageTitle={pageTitle}
           onSectionChange={handleSectionChange}
         />
-        {activeSection === "gigs-list" && (
-          <div className="mt-3 rounded-xl border border-white/10 bg-gray-950/60 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="showHistoricGigs"
-                  checked={showHistoricGigs}
-                  onCheckedChange={(checked) => {
-                    const nextValue = !!checked;
-                    setShowHistoricGigs(nextValue);
-                    if (nextValue) {
-                      fetchGigs();
-                    }
-                  }}
-                />
-                <Label htmlFor="showHistoricGigs" className="cursor-pointer">
-                  View historic gigs
-                </Label>
-              </div>
-              <span className="text-xs text-white/50">
-                Includes past gigs from the database.
-              </span>
-            </div>
+        <div ref={menuRef} className="admin-main">
+          <div
+            className={
+              activeSection === "gigs-calendar"
+                ? "calendar-page-header"
+                : "scroll-mt-24"
+            }
+          >
+            <AdminHeader
+              pageTitle={pageTitle}
+              description={
+                activeSection === "set-list-builder"
+                  ? "Build the live show flow, keep the song catalogue current, and track each set length."
+                  : activeSection === "site-images"
+                    ? "Assign gallery images to the public site without touching code."
+                    : isGigsSection
+                      ? "View and manage gigs."
+                      : activeSection === "payments-revenue"
+                        ? "Track income trends and compare across time periods."
+                        : activeSection === "payments-payslips"
+                          ? "Generate payslips by band member and month."
+                          : "Run backend maintenance, syncing, and publishing checks."
+              }
+              actionLabel={isGigsSection ? "Add Gig" : undefined}
+              onAction={isGigsSection ? () => openEditModal() : undefined}
+            />
           </div>
-        )}
-      </div>
 
-      <div className="scroll-mt-24">
-        <AdminHeader
-          pageTitle={pageTitle}
-          description={
-            activeSection === "set-list-builder"
-              ? "Build the live show flow, keep the song catalogue current, and track each set length."
-              : activeSection === "site-images"
-                ? "Assign gallery images to the public site without touching code."
-              : isGigsSection
-                ? "View and manage gigs."
-              : activeSection === "payments-revenue"
-                ? "Track income trends and compare across time periods."
-                : activeSection === "payments-payslips"
-                  ? "Generate payslips by band member and month."
-                  : "Run backend maintenance, syncing, and publishing checks."
+          {activeSection === "gigs-list" && (
+            <div className="admin-stats mb-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  label: "Upcoming shows",
+                  value: futureOnly.length,
+                  detail: "From today onwards",
+                },
+                {
+                  label: "Next on stage",
+                  value: nextGig?.venue || "No shows booked",
+                  detail: nextGig
+                    ? new Date(`${nextGig.date}T12:00:00`).toLocaleDateString(
+                        "en-GB",
+                        { day: "numeric", month: "long" },
+                      )
+                    : "Add your next gig",
+                },
+                {
+                  label: "Posters to arrange",
+                  value: futureOnly.filter((gig) => gig.postersNeeded).length,
+                  detail: "For upcoming shows",
+                },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                >
+                  <p className="text-xs text-white/50">{stat.label}</p>
+                  <p className="mt-3 break-words text-xl font-semibold tracking-tight">
+                    {loading ? "—" : stat.value}
+                  </p>
+                  <p className="mt-2 text-xs text-white/40">{stat.detail}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeSection === "gigs-list" && (
+            <div className="mt-3 rounded-xl border border-white/10 bg-gray-950/60 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="showHistoricGigs"
+                    checked={showHistoricGigs}
+                    onCheckedChange={(checked) => {
+                      const nextValue = !!checked;
+                      setShowHistoricGigs(nextValue);
+                      if (nextValue) {
+                        fetchGigs();
+                      }
+                    }}
+                  />
+                  <Label htmlFor="showHistoricGigs" className="cursor-pointer">
+                    View historic gigs
+                  </Label>
+                </div>
+                <span className="text-xs text-white/50">
+                  Includes past gigs from the database.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {activeSection === "set-list-builder" && (
+            <SetListBuilderSection
+              songs={songs}
+              loading={songsLoading}
+              savedSetLists={savedSetLists}
+              savedSetListsLoading={savedSetListsLoading}
+              setListSaving={setListSaving}
+              onCreateSong={() => openSongModal()}
+              onSelectSong={openSongDetailsModal}
+              onEditSong={openSongModal}
+              onSaveSetList={handleSaveSetList}
+              onDeleteSetList={handleDeleteSetList}
+            />
+          )}
+
+          {activeSection === "site-images" && (
+            <SiteImagesSection
+              slots={siteMediaSlots}
+              slotsLoading={siteMediaLoading}
+              mediaItems={mediaItems}
+              mediaLoading={mediaLoading}
+              savingKey={siteMediaSavingKey}
+              onAssign={handleSaveSiteMediaSlot}
+            />
+          )}
+
+          {activeSection === "gigs-list" && (
+            <GigsListSection
+              loading={loading}
+              search={search}
+              displayedGigs={displayedGigs}
+              onSearchChange={setSearch}
+              onClearSearch={() => setSearch("")}
+              onSelectGig={openDetailsModal}
+            />
+          )}
+
+          {activeSection === "gigs-calendar" && (
+            <GigsCalendarSection
+              loading={loading}
+              gigs={gigs}
+              gigsError={gigsError}
+              onRefreshGigs={fetchGigs}
+              onEventClick={openDetailsModal}
+              onCreateGig={(dateISO, startHHmm) =>
+                openCreateAt(dateISO, startHHmm)
+              }
+            />
+          )}
+
+          {activeSection === "payments-revenue" && (
+            <RevenueRundownSection
+              granularity={revenueGranularity}
+              onGranularityChange={setRevenueGranularity}
+              showRange={showRevenueRange}
+              onToggleRange={() => setShowRevenueRange((prev) => !prev)}
+              revenueStart={revenueStart}
+              revenueEnd={revenueEnd}
+              onStartChange={setRevenueStart}
+              onEndChange={setRevenueEnd}
+              onClearRange={() => {
+                setRevenueStart("");
+                setRevenueEnd("");
+              }}
+              summary={revenueSummary}
+            />
+          )}
+
+          {activeSection === "payments-payslips" && (
+            <PayslipsSection gigs={gigs} />
+          )}
+
+          {activeSection === "tools" && (
+            <ToolsSection
+              syncing={syncing}
+              syncError={syncError}
+              syncResult={syncResult}
+              onRunCalendarSync={runCalendarSync}
+              mediaItems={mediaItems}
+              mediaLoading={mediaLoading}
+              mediaSyncing={mediaSyncing}
+              mediaSyncError={mediaSyncError}
+              mediaSyncResult={mediaSyncResult}
+              onRunMediaSync={runMediaSync}
+              facebookPosting={facebookPosting}
+              facebookPostResult={facebookPostResult}
+              facebookPostError={facebookPostError}
+              onRunFacebookAutoPost={runFacebookAutoPost}
+            />
+          )}
+        </div>
+
+        <GigDetailsModal
+          isOpen={isDetailsModalOpen}
+          onOpenChange={handleDetailsModalOpenChange}
+          gig={selectedGig}
+          onEdit={handleEditFromDetails}
+        />
+
+        <GigModal
+          isOpen={isEditModalOpen}
+          onOpenChange={handleEditModalOpenChange}
+          saving={saving}
+          currentGig={currentGig}
+          formData={formData}
+          venueSuggestions={venueSuggestions}
+          onChange={handleChange}
+          onVenueSuggestionClick={handleVenueSuggestionClick}
+          onSave={handleSaveGig}
+          onDelete={handleDeleteGig}
+          onTogglePrivate={(checked) =>
+            setFormData((prev) => ({ ...prev, privateEvent: checked }))
           }
-          secondaryActionLabel="Log Out"
-          onSecondaryAction={handleLogout}
-          actionLabel={
-            isGigsSection
-                ? "Add Gig"
-                : undefined
-          }
-          onAction={
-            isGigsSection
-                ? () => openEditModal()
-                : undefined
+          onTogglePosters={(checked) =>
+            setFormData((prev) => ({ ...prev, postersNeeded: checked }))
           }
         />
-      </div>
 
-      {activeSection === "set-list-builder" && (
-        <SetListBuilderSection
-          songs={songs}
-          loading={songsLoading}
-          savedSetLists={savedSetLists}
-          savedSetListsLoading={savedSetListsLoading}
-          setListSaving={setListSaving}
-          onCreateSong={() => openSongModal()}
-          onSelectSong={openSongDetailsModal}
-          onEditSong={openSongModal}
-          onSaveSetList={handleSaveSetList}
-          onDeleteSetList={handleDeleteSetList}
+        <SongDetailsModal
+          isOpen={isSongDetailsModalOpen}
+          onOpenChange={handleSongDetailsOpenChange}
+          song={selectedSong}
+          onEdit={handleEditSongFromDetails}
         />
-      )}
-
-      {activeSection === "site-images" && (
-        <SiteImagesSection
-          slots={siteMediaSlots}
-          slotsLoading={siteMediaLoading}
-          mediaItems={mediaItems}
-          mediaLoading={mediaLoading}
-          savingKey={siteMediaSavingKey}
-          onAssign={handleSaveSiteMediaSlot}
-        />
-      )}
-
-      {activeSection === "gigs-list" && (
-        <GigsListSection
-          loading={loading}
-          search={search}
-          displayedGigs={displayedGigs}
-          onSearchChange={setSearch}
-          onClearSearch={() => setSearch("")}
-          onSelectGig={openDetailsModal}
-        />
-      )}
-
-      {activeSection === "gigs-calendar" && (
-        <GigsCalendarSection
-          loading={loading}
-          gigs={displayedGigs}
-          googleFeed={googleFeed}
-          onEventClick={openDetailsModal}
-          onCreateGig={(dateISO, startHHmm) => openCreateAt(dateISO, startHHmm)}
-        />
-      )}
-
-      {activeSection === "payments-revenue" && (
-        <RevenueRundownSection
-          granularity={revenueGranularity}
-          onGranularityChange={setRevenueGranularity}
-          showRange={showRevenueRange}
-          onToggleRange={() => setShowRevenueRange((prev) => !prev)}
-          revenueStart={revenueStart}
-          revenueEnd={revenueEnd}
-          onStartChange={setRevenueStart}
-          onEndChange={setRevenueEnd}
-          onClearRange={() => {
-            setRevenueStart("");
-            setRevenueEnd("");
-          }}
-          summary={revenueSummary}
-        />
-      )}
-
-      {activeSection === "payments-payslips" && (
-        <PayslipsSection gigs={gigs} />
-      )}
-
-      {activeSection === "tools" && (
-        <ToolsSection
-          syncing={syncing}
-          syncError={syncError}
-          syncResult={syncResult}
-          onRunCalendarSync={runCalendarSync}
-          mediaItems={mediaItems}
-          mediaLoading={mediaLoading}
-          mediaSyncing={mediaSyncing}
-          mediaSyncError={mediaSyncError}
-          mediaSyncResult={mediaSyncResult}
-          onRunMediaSync={runMediaSync}
-          facebookPosting={facebookPosting}
-          facebookPostResult={facebookPostResult}
-          facebookPostError={facebookPostError}
-          onRunFacebookAutoPost={runFacebookAutoPost}
-        />
-      )}
-
-      <GigDetailsModal
-        isOpen={isDetailsModalOpen}
-        onOpenChange={handleDetailsModalOpenChange}
-        gig={selectedGig}
-        onEdit={handleEditFromDetails}
-      />
-
-      <GigModal
-        isOpen={isEditModalOpen}
-        onOpenChange={handleEditModalOpenChange}
-        saving={saving}
-        currentGig={currentGig}
-        formData={formData}
-        venueSuggestions={venueSuggestions}
-        onChange={handleChange}
-        onVenueSuggestionClick={handleVenueSuggestionClick}
-        onSave={handleSaveGig}
-        onDelete={handleDeleteGig}
-        onTogglePrivate={(checked) =>
-          setFormData((prev) => ({ ...prev, privateEvent: checked }))
-        }
-        onTogglePosters={(checked) =>
-          setFormData((prev) => ({ ...prev, postersNeeded: checked }))
-        }
-      />
-
-      <SongDetailsModal
-        isOpen={isSongDetailsModalOpen}
-        onOpenChange={handleSongDetailsOpenChange}
-        song={selectedSong}
-        onEdit={handleEditSongFromDetails}
-      />
 
         <SongModal
           isOpen={isSongModalOpen}
