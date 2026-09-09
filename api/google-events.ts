@@ -142,7 +142,12 @@ export default async function handler(req: any, res: any) {
 
       const items = result.value
         .filter(
-          (e) => e.status !== "cancelled" && e.transparency !== "transparent",
+          // The band calendar records absences, including all-day entries
+          // marked Free in Google. Those still block band bookings.
+          (e) =>
+            e.status !== "cancelled" &&
+            (calendarId === "soundwalkband@gmail.com" ||
+              e.transparency !== "transparent"),
         )
         .map((e) => {
           const hasAllDay = !!e.start?.date || !!e.end?.date;

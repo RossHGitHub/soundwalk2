@@ -307,8 +307,9 @@ export default function GigCalendar({
       )}
       {availability && (
         <p className="diary-footnote">
-          A date is available when there are no gigs or busy band-calendar
-          events that day. Creating a gig confirms the booking.
+          A date is available when there are no gigs or band-calendar entries
+          that day. Band-calendar entries block bookings even when marked Free
+          in Google. Creating a gig confirms the booking.
         </p>
       )}
     </section>
