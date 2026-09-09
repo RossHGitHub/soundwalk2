@@ -86,211 +86,213 @@ export default function GigModal({
             </DialogPrimitive.Close>
           </header>
           <form onSubmit={onSave} aria-busy={saving} className="booking-form">
-            <fieldset disabled={saving} className="booking-fields">
-              <div className="booking-date-banner">
-                <CalendarDays size={20} />
-                <div>
-                  <span className="text-[10px] uppercase tracking-widest text-white/45">
-                    The date
-                  </span>
-                  <p className="mt-1 text-sm font-medium">
-                    {date.isValid
-                      ? date.toFormat("cccc d LLLL yyyy")
-                      : "Choose a date below"}
-                  </p>
+            <div className="booking-scroll">
+              <fieldset disabled={saving} className="booking-fields">
+                <div className="booking-date-banner">
+                  <CalendarDays size={20} />
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest text-white/45">
+                      The date
+                    </span>
+                    <p className="mt-1 text-sm font-medium">
+                      {date.isValid
+                        ? date.toFormat("cccc d LLLL yyyy")
+                        : "Choose a date below"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <section className="booking-section">
-                <h3>
-                  <MapPin size={15} />
-                  The essentials
-                </h3>
-                <div className="relative">
-                  <Label htmlFor="venue">
-                    Venue <span className="text-white/40">*</span>
-                  </Label>
-                  <Input
-                    autoFocus
-                    required
-                    id="venue"
-                    name="venue"
-                    autoComplete="off"
-                    placeholder="Where are we playing?"
-                    value={formData.venue}
-                    onChange={onChange}
-                  />
-                  {venueSuggestions.length > 0 && (
-                    <ul className="absolute inset-x-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded-xl border border-white/15 bg-[#182036] shadow-xl">
-                      {venueSuggestions.map((venue) => (
-                        <li key={venue}>
-                          <button
-                            type="button"
-                            className="w-full px-4 py-3 text-left text-sm hover:bg-white/10"
-                            onClick={() => onVenueSuggestionClick(venue)}
-                          >
-                            {venue}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="min-w-0">
-                    <Label htmlFor="date">Date *</Label>
+                <section className="booking-section">
+                  <h3>
+                    <MapPin size={15} />
+                    The essentials
+                  </h3>
+                  <div className="relative">
+                    <Label htmlFor="venue">
+                      Venue <span className="text-white/40">*</span>
+                    </Label>
                     <Input
+                      autoFocus
                       required
-                      type="date"
-                      id="date"
-                      name="date"
-                      value={formData.date}
+                      id="venue"
+                      name="venue"
+                      autoComplete="off"
+                      placeholder="Where are we playing?"
+                      value={formData.venue}
                       onChange={onChange}
                     />
+                    {venueSuggestions.length > 0 && (
+                      <ul className="absolute inset-x-0 top-full z-10 mt-1 max-h-40 overflow-y-auto rounded-xl border border-white/15 bg-[#182036] shadow-xl">
+                        {venueSuggestions.map((venue) => (
+                          <li key={venue}>
+                            <button
+                              type="button"
+                              className="w-full px-4 py-3 text-left text-sm hover:bg-white/10"
+                              onClick={() => onVenueSuggestionClick(venue)}
+                            >
+                              {venue}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <div className="min-w-0">
-                    <Label htmlFor="startTime">Start time</Label>
-                    <Input
-                      type="time"
-                      id="startTime"
-                      name="startTime"
-                      value={formData.startTime}
-                      onChange={onChange}
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="min-w-0">
+                      <Label htmlFor="date">Date *</Label>
+                      <Input
+                        required
+                        type="date"
+                        id="date"
+                        name="date"
+                        value={formData.date}
+                        onChange={onChange}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <Label htmlFor="startTime">Start time</Label>
+                      <Input
+                        type="time"
+                        id="startTime"
+                        name="startTime"
+                        value={formData.startTime}
+                        onChange={onChange}
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
-              <section className="booking-section">
-                <h3>Fee & payment</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
+                </section>
+                <section className="booking-section">
+                  <h3>Fee & payment</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="fee">Agreed fee (£)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        id="fee"
+                        name="fee"
+                        placeholder="0.00"
+                        value={formData.fee}
+                        onChange={onChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentMethod">Payment method *</Label>
+                      <select
+                        required
+                        id="paymentMethod"
+                        name="paymentMethod"
+                        value={formData.paymentMethod || ""}
+                        onChange={onChange}
+                      >
+                        <option value="">Choose a method</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank transfer</option>
+                      </select>
+                    </div>
+                  </div>
                   <div>
-                    <Label htmlFor="fee">Agreed fee (£)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      id="fee"
-                      name="fee"
-                      placeholder="0.00"
-                      value={formData.fee}
-                      onChange={onChange}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="paymentMethod">Payment method *</Label>
+                    <Label htmlFor="paymentSplit">Split between the band</Label>
                     <select
-                      required
-                      id="paymentMethod"
-                      name="paymentMethod"
-                      value={formData.paymentMethod || ""}
+                      id="paymentSplit"
+                      name="paymentSplit"
+                      value={formData.paymentSplit || "Even"}
                       onChange={onChange}
                     >
-                      <option value="">Choose a method</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Bank Transfer">Bank transfer</option>
+                      <option value="Even">Even split</option>
+                      <option value="Customise">Custom split</option>
                     </select>
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="paymentSplit">Split between the band</Label>
-                  <select
-                    id="paymentSplit"
-                    name="paymentSplit"
-                    value={formData.paymentSplit || "Even"}
-                    onChange={onChange}
-                  >
-                    <option value="Even">Even split</option>
-                    <option value="Customise">Custom split</option>
-                  </select>
-                </div>
-                {formData.paymentSplit === "Customise" ? (
-                  <>
-                    <div className="grid grid-cols-3 gap-3">
-                      {(["Ross", "Keith", "Barry"] as const).map((person) => {
-                        const name = `paymentSplit${person}` as const;
-                        return (
-                          <div className="min-w-0" key={person}>
-                            <Label htmlFor={name}>{person} (£)</Label>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              id={name}
-                              name={name}
-                              value={formData[name] ?? ""}
-                              onChange={onChange}
-                            />
-                          </div>
-                        );
-                      })}
+                  {formData.paymentSplit === "Customise" ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        {(["Ross", "Keith", "Barry"] as const).map((person) => {
+                          const name = `paymentSplit${person}` as const;
+                          return (
+                            <div className="min-w-0" key={person}>
+                              <Label htmlFor={name}>{person} (£)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                id={name}
+                                name={name}
+                                value={formData[name] ?? ""}
+                                onChange={onChange}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {splitMismatch && (
+                        <p role="status" className="text-sm text-amber-200">
+                          Split total £{splitSum.toFixed(2)} must match the £
+                          {fee.toFixed(2)} fee.
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-white/50">
+                      Ross, Keith and Barry · £{Math.round(fee / 3)} each (rounded
+                      to whole pounds).
+                    </p>
+                  )}
+                </section>
+                <details className="booking-extras">
+                  <summary>
+                    Notes & promotion{" "}
+                    <span className="ml-auto text-xs font-normal text-white/40">
+                      Optional
+                    </span>
+                    <ChevronDown size={16} />
+                  </summary>
+                  <div className="booking-section">
+                    <div>
+                      <Label htmlFor="internalNotes">Band notes</Label>
+                      <Textarea
+                        id="internalNotes"
+                        name="internalNotes"
+                        placeholder="Access, timings, requests…"
+                        value={formData.internalNotes || ""}
+                        onChange={onChange}
+                      />
                     </div>
-                    {splitMismatch && (
-                      <p role="status" className="text-sm text-amber-200">
-                        Split total £{splitSum.toFixed(2)} must match the £
-                        {fee.toFixed(2)} fee.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-white/50">
-                    Ross, Keith and Barry · £{Math.round(fee / 3)} each (rounded
-                    to whole pounds).
-                  </p>
-                )}
-              </section>
-              <details className="booking-extras">
-                <summary>
-                  Notes & promotion{" "}
-                  <span className="ml-auto text-xs font-normal text-white/40">
-                    Optional
-                  </span>
-                  <ChevronDown size={16} />
-                </summary>
-                <div className="booking-section">
-                  <div>
-                    <Label htmlFor="internalNotes">Band notes</Label>
-                    <Textarea
-                      id="internalNotes"
-                      name="internalNotes"
-                      placeholder="Access, timings, requests…"
-                      value={formData.internalNotes || ""}
-                      onChange={onChange}
-                    />
+                    <div>
+                      <Label htmlFor="description">Public description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={onChange}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor="description">Public description</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={onChange}
+                </details>
+                <div className="booking-toggles">
+                  <label>
+                    <Checkbox
+                      id="privateEvent"
+                      checked={!!formData.privateEvent}
+                      onCheckedChange={(value) => onTogglePrivate(!!value)}
                     />
-                  </div>
+                    <span>
+                      Private event
+                      <small>Keep this off the public gig listings</small>
+                    </span>
+                  </label>
+                  <label>
+                    <Checkbox
+                      id="postersNeeded"
+                      checked={!!formData.postersNeeded}
+                      onCheckedChange={(value) => onTogglePosters(!!value)}
+                    />
+                    <span>
+                      Posters needed<small>Flag this show for promotion</small>
+                    </span>
+                  </label>
                 </div>
-              </details>
-              <div className="booking-toggles">
-                <label>
-                  <Checkbox
-                    id="privateEvent"
-                    checked={!!formData.privateEvent}
-                    onCheckedChange={(value) => onTogglePrivate(!!value)}
-                  />
-                  <span>
-                    Private event
-                    <small>Keep this off the public gig listings</small>
-                  </span>
-                </label>
-                <label>
-                  <Checkbox
-                    id="postersNeeded"
-                    checked={!!formData.postersNeeded}
-                    onCheckedChange={(value) => onTogglePosters(!!value)}
-                  />
-                  <span>
-                    Posters needed<small>Flag this show for promotion</small>
-                  </span>
-                </label>
-              </div>
-            </fieldset>
+              </fieldset>
+            </div>
             <footer className="booking-footer">
               {currentGig ? (
                 <Button

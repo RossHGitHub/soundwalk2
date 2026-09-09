@@ -244,13 +244,18 @@
 .booking-form {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+}
+.booking-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .booking-fields {
   min-width: 0;
-  overflow-y: auto;
   padding: 24px;
-  overscroll-behavior: contain;
 }
 .booking-date-banner {
   display: flex;
@@ -344,12 +349,6 @@
   }
   .booking-fields {
     padding: 20px;
-  }
-  .booking-form {
-    flex: 1;
-  }
-  .booking-fields {
-    flex: 1;
   }
   .booking-footer {
     padding: 14px 20px calc(14px + env(safe-area-inset-bottom));
