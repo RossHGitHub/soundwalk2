@@ -487,8 +487,8 @@ export default function Admin() {
     setSaving(true);
 
     try {
-      await saveGigApi(formData, currentGig);
-      await fetchGigs();
+      const savedGig = await saveGigApi(formData, currentGig);
+      setGigs((previous) => [...previous.filter((gig) => gig._id !== savedGig._id), savedGig]);
       closeEditModal();
     } catch (error) {
       console.error(error);
@@ -507,7 +507,7 @@ export default function Admin() {
     if (!confirm("Are you sure you want to delete this gig?")) return;
     try {
       await deleteGigApi(currentGig._id);
-      await fetchGigs();
+      setGigs((previous) => previous.filter((gig) => gig._id !== currentGig._id));
       closeEditModal();
     } catch (error) {
       console.error(error);
@@ -759,6 +759,7 @@ export default function Admin() {
           onSectionChange={handleSectionChange}
         />
         <div ref={menuRef} className="admin-main">
+          <div key={activeSection} className="admin-section-view">
           <div
             className={
               activeSection === "gigs-calendar"
@@ -940,6 +941,7 @@ export default function Admin() {
               onRunFacebookAutoPost={runFacebookAutoPost}
             />
           )}
+          </div>
         </div>
 
         <GigDetailsModal

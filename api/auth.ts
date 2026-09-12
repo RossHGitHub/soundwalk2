@@ -19,6 +19,7 @@ async function getDb() {
 }
 
 export default async function handler(req: any, res: any) {
+  res.setHeader("Cache-Control", "no-store");
   try {
     if (rejectUntrustedRequest(req, res)) return;
 
@@ -51,7 +52,7 @@ export default async function handler(req: any, res: any) {
     const isMatch = await bcrypt.compare(password, user.passwordHash);
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id.toString(), username: user.user_id }, JWT_SECRET, { expiresIn: '1d' });
+    const token = jwt.sign({ id: user._id.toString(), username: user.user_id }, JWT_SECRET, { expiresIn: '30d' });
     return res.status(200).json({ token });
   } catch (err: any) {
     console.error('Login error:', err?.message || err);

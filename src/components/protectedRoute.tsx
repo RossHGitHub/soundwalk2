@@ -9,9 +9,10 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
-  const [authStatus, setAuthStatus] = useState<"checking" | "valid" | "invalid">(
+  const [authStatus, setAuthStatus] = useState<"checking" | "valid" | "invalid" | "error">(
     "checking"
   );
+  const [retry, setRetry] = useState(0);
   const token = localStorage.getItem("auth-token");
   const redirectTarget = `${location.pathname}${location.search}${location.hash}`;
 
@@ -29,26 +30,26 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       try {
         const res = await fetch("/api/auth", {
           method: "GET",
+          cache: "no-store",
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
           signal: controller.signal,
         });
 
-        if (!res.ok) {
+        if (res.status === 401) {
           localStorage.removeItem("auth-token");
           setAuthStatus("invalid");
           return;
         }
 
-        setAuthStatus("valid");
+        setAuthStatus(res.ok ? "valid" : "error");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
 
-        localStorage.removeItem("auth-token");
-        setAuthStatus("invalid");
+        setAuthStatus("error");
       }
     }
 
@@ -56,7 +57,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     void verifyToken();
 
     return () => controller.abort();
-  }, [location.pathname, location.search, location.hash]);
+  }, [retry]);
 
   if (!token || authStatus === "invalid") {
     return (
@@ -65,6 +66,13 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         replace
       />
     );
+  }
+
+  if (authStatus === "error") {
+    return <div className="grid min-h-[40vh] place-content-center gap-4 text-center text-white">
+      <p>Unable to check your session. Your saved login is still here.</p>
+      <button type="button" className="rounded-full border p-3" onClick={() => setRetry((value) => value + 1)}>Try again</button>
+    </div>;
   }
 
   if (authStatus === "checking") {

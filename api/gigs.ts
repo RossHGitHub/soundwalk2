@@ -119,6 +119,8 @@ export default async function handler(req: any, res: any) {
   const calendar = getCalendarClient();
   const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "soundwalkgigs@gmail.com";
 
+  res.setHeader("Cache-Control", "no-store");
+
   // GET gigs
   if (method === "GET") {
     let isAdminRequest = false;

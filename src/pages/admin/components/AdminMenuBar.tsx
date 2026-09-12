@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   CalendarDays,
@@ -76,6 +77,7 @@ export default function AdminMenuBar({
   onSectionChange,
   onLogout,
 }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigation = (mobile = false) => (
     <nav aria-label="Admin navigation" className="space-y-6">
       {["Live shows", "Finances", "Management"].map((group) => (
@@ -143,7 +145,7 @@ export default function AdminMenuBar({
             className="h-10 w-28 object-contain sm:w-36"
           />
         </Link>
-        <Sheet>
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
@@ -154,7 +156,7 @@ export default function AdminMenuBar({
               <Menu size={18} className="shrink-0" />
             </button>
           </SheetTrigger>
-          <SheetContent className="admin-theme w-[min(88vw,340px)] overflow-y-auto border-white/10 bg-[#090e20] text-white">
+          <SheetContent className="admin-mobile-menu admin-theme w-[min(88vw,340px)] overflow-y-auto border-white/10 bg-[#090e20] text-white">
             <SheetHeader>
               <SheetTitle className="text-white">Band workspace</SheetTitle>
               <SheetDescription className="text-white/60">
@@ -168,6 +170,20 @@ export default function AdminMenuBar({
           </SheetContent>
         </Sheet>
       </div>
+      <nav className="admin-bottom-nav" aria-label="Quick navigation">
+        {items.slice(0, 3).map(({ key, icon: Icon }, index) => (
+          <button key={key} type="button" aria-current={activeSection === key ? "page" : undefined}
+            onClick={() => onSectionChange(key)}>
+            <Icon size={21} aria-hidden="true" />
+            <span>{["Gigs", "Calendar", "Set lists"][index]}</span>
+          </button>
+        ))}
+        <button type="button" aria-label="More admin sections" aria-haspopup="dialog" aria-expanded={menuOpen}
+          aria-current={!items.slice(0, 3).some((item) => item.key === activeSection) ? "page" : undefined}
+          onClick={() => setMenuOpen(true)}>
+          <Menu size={21} aria-hidden="true" /><span>More</span>
+        </button>
+      </nav>
     </>
   );
 }
