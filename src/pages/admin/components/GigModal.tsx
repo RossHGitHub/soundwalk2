@@ -136,7 +136,7 @@ export default function GigModal({
                       </ul>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="booking-datetime grid grid-cols-2 gap-3">
                     <div className="min-w-0">
                       <Label htmlFor="date">Date *</Label>
                       <Input

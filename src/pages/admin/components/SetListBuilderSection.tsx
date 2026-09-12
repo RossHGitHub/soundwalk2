@@ -129,6 +129,8 @@ export default function SetListBuilderSection({
   onSaveSetList,
   onDeleteSetList,
 }: Props) {
+  const [mobilePane, setMobilePane] = useState<"arrange" | "catalogue">("arrange");
+  const [notice, setNotice] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [currentSetListId, setCurrentSetListId] = useState<string | null>(null);
   const [sets, setSets] = useState<SetList[]>(() => buildDefaultSetLists());
@@ -246,6 +248,7 @@ export default function SetListBuilderSection({
         },
         currentSetListId
       );
+      setNotice("Setlist saved.");
       setCurrentSetListId(savedSetList._id ?? null);
       setDraftTitle(savedSetList.title);
       setSets(ensureMinimumSets(cloneSets(savedSetList.sets)));
@@ -281,6 +284,7 @@ export default function SetListBuilderSection({
 
   function addSongToSet(songId: string, setId = activeSetId) {
     if (usedSongIds.has(songId)) return;
+    setNotice(`${songsById.get(songId)?.title || "Song"} added to ${sets.find((set) => set.id === setId)?.name || "set"}.`);
 
     setSets((prev) =>
       prev.map((set) =>
@@ -421,9 +425,14 @@ export default function SetListBuilderSection({
   );
 
   return (
-    <div className="mt-4 space-y-6">
-      <section className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(81,183,172,0.18),_transparent_28%),linear-gradient(180deg,rgba(12,20,28,0.96)_0%,rgba(7,11,16,0.98)_100%)] p-4 shadow-[0_30px_70px_rgba(0,0,0,0.28)] sm:p-5">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+    <div className="set-builder mt-4" data-mobile-pane={mobilePane}>
+      <div className="set-builder-mobile-tabs" aria-label="Setlist workspace">
+        <button type="button" aria-pressed={mobilePane === "arrange"} onClick={() => setMobilePane("arrange")}>Arrange sets · {totalSongs}</button>
+        <button type="button" aria-pressed={mobilePane === "catalogue"} onClick={() => setMobilePane("catalogue")}>Add songs</button>
+      </div>
+      <p className="set-builder-notice" role="status">{notice || "Choose a set, add songs, then arrange your running order."}</p>
+      <section className="set-builder-plan">
+        <div className="flex flex-col gap-4">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ab5bf]">
               Set Builder
@@ -431,11 +440,12 @@ export default function SetListBuilderSection({
           
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,260px)_auto_auto_auto]">
+          <div className="set-builder-toolbar">
             <Input
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
               placeholder="Setlist title"
+              aria-label="Setlist title"
               className="border-white/10 bg-white/5 text-white"
             />
             <Button
@@ -460,7 +470,7 @@ export default function SetListBuilderSection({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
               Songs
@@ -475,7 +485,7 @@ export default function SetListBuilderSection({
           </div>
         </div>
 
-        <div className="mt-5 flex gap-4 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible">
+        <div className="set-builder-sets">
           {sets.map((set) => {
             const totalDuration = getSetDuration(set, songsById);
             const isActive = set.id === activeSetId;
@@ -483,7 +493,7 @@ export default function SetListBuilderSection({
             return (
               <section
                 key={set.id}
-                className={`min-w-[85%] snap-center rounded-[28px] border p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] transition md:min-w-0 ${
+                className={`set-builder-set ${
                   isActive
                     ? "border-emerald-400/60 bg-[#0f1f29]"
                     : "border-white/10 bg-white/[0.035]"
@@ -493,6 +503,7 @@ export default function SetListBuilderSection({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Input
+                      aria-label="Set name"
                       value={set.name}
                       onChange={(event) => handleSetNameChange(set.id, event.target.value)}
                       onClick={(event) => event.stopPropagation()}
@@ -509,9 +520,10 @@ export default function SetListBuilderSection({
                       variant="ghost"
                       size="icon"
                       className="text-white/60 hover:text-white"
+                      aria-label={`Remove ${set.name}`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        removeSet(set.id);
+                        if (!set.entries.length || confirm(`Remove ${set.name} and its songs from this draft?`)) removeSet(set.id);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -529,7 +541,7 @@ export default function SetListBuilderSection({
                       }}
                       onDrop={(event) => handleDrop(event, set.id, 0)}
                     >
-                      Drag songs here or use quick add from the catalogue.
+                      Add songs from the catalogue. Drag or use the arrow buttons to arrange them.
                     </div>
                   )}
 
@@ -564,13 +576,13 @@ export default function SetListBuilderSection({
                             const nextIndex = getTargetIndexFromPointer(event, index);
                             handleDrop(event, set.id, nextIndex);
                           }}
-                          className={`group rounded-[20px] border bg-[#09141c] px-3 py-2 transition hover:bg-[#0d1820] ${
+                          className={`set-builder-entry group rounded-[20px] border bg-[#09141c] px-3 py-2 transition hover:bg-[#0d1820] ${
                             showDropBefore
                               ? "border-emerald-400/50 shadow-[inset_0_2px_0_rgba(74,222,128,0.75)]"
                               : "border-white/10 hover:border-emerald-400/35"
                           }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="set-builder-song-row">
                             <button
                               type="button"
                               onClick={() => onSelectSong(song)}
@@ -605,7 +617,12 @@ export default function SetListBuilderSection({
                               </div>
                             </button>
 
-                            <div className="flex shrink-0 items-center gap-1.5">
+                            <div className="set-builder-song-actions">
+                              <select aria-label={`Move ${song.title} to set`} value={set.id}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={(event) => moveOrInsertPayload({ type: "set-entry", songId: entry.songId, entryId: entry.id, sourceSetId: set.id }, event.target.value, sets.find((item) => item.id === event.target.value)?.entries.length || 0)}>
+                                {sets.map((target) => <option key={target.id} value={target.id}>{target.name}</option>)}
+                              </select>
                               <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-xs text-white/60">
                                 {song.duration}
                               </span>
@@ -614,6 +631,7 @@ export default function SetListBuilderSection({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-white/60 hover:text-white"
+                                aria-label={`Move ${song.title} up`}
                                 onClick={() => moveEntry(set.id, index, -1)}
                                 disabled={index === 0}
                               >
@@ -624,6 +642,7 @@ export default function SetListBuilderSection({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-white/60 hover:text-white"
+                                aria-label={`Move ${song.title} down`}
                                 onClick={() => moveEntry(set.id, index, 1)}
                                 disabled={index === set.entries.length - 1}
                               >
@@ -634,6 +653,7 @@ export default function SetListBuilderSection({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-white/60 hover:text-white"
+                                aria-label={`Edit ${song.title}`}
                                 onClick={() => onEditSong(song)}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -643,6 +663,7 @@ export default function SetListBuilderSection({
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-white/60 hover:text-red-300"
+                                aria-label={`Remove ${song.title}`}
                                 onClick={() => removeEntry(set.id, entry.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -670,7 +691,7 @@ export default function SetListBuilderSection({
                   )}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <div className="set-builder-runtime mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
                       Total Duration
@@ -696,8 +717,8 @@ export default function SetListBuilderSection({
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-white/10 bg-gray-950/60 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.24)] sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <section className="set-builder-catalogue">
+        <div className="flex flex-col gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9ab5bf]">
               Song Catalogue
@@ -713,6 +734,7 @@ export default function SetListBuilderSection({
                 value={catalogSearch}
                 onChange={(event) => setCatalogSearch(event.target.value)}
                 placeholder="Search title, artist, lyrics..."
+                aria-label="Search songs"
                 className="border-white/10 bg-white/5 pl-10 text-white"
               />
             </div>
@@ -723,13 +745,15 @@ export default function SetListBuilderSection({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Add songs to set">
+          <span className="w-full text-xs text-white/60">Add songs to:</span>
           {sets.map((set) => {
             const isActive = set.id === activeSetId;
             return (
               <button
                 key={set.id}
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => setActiveSetId(set.id)}
                 className={`rounded-full border px-3 py-1.5 text-sm transition ${
                   isActive
@@ -751,7 +775,7 @@ export default function SetListBuilderSection({
           <div className="mt-8 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-4 py-10 text-center text-white/55">
             {songs.length === 0
               ? "No songs in the catalogue yet. Add one to get started."
-              : "No songs matched that search."}
+              : availableSongs.length === 0 ? "All songs are in your sets. Your running order is ready to review." : "No songs matched that search."}
           </div>
         ) : (
           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
@@ -767,7 +791,7 @@ export default function SetListBuilderSection({
                   onDragStart={(event) =>
                     buildDragPayload(event, { type: "catalog", songId })
                   }
-                  className="group flex items-center gap-3 border-b border-white/10 px-3 py-2 transition last:border-b-0 hover:bg-white/[0.04]"
+                  className="set-builder-catalogue-song group flex items-center gap-3 border-b border-white/10 px-3 py-2 transition last:border-b-0 hover:bg-white/[0.04]"
                 >
                   <button
                     type="button"
@@ -803,7 +827,7 @@ export default function SetListBuilderSection({
                   </button>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <Button type="button" size="sm" onClick={() => addSongToSet(songId)}>
+                    <Button type="button" size="sm" aria-label={`Add ${song.title} to ${sets.find((set) => set.id === activeSetId)?.name}`} onClick={() => addSongToSet(songId)}>
                       <Plus className="h-4 w-4" />
                       Add
                     </Button>
@@ -811,7 +835,8 @@ export default function SetListBuilderSection({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => onEditSong(song)}
+                      aria-label={`Edit ${song.title}`}
+                                onClick={() => onEditSong(song)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -865,7 +890,7 @@ export default function SetListBuilderSection({
       >
         <DialogPrimitive.Portal>
           <DialogPrimitive.Overlay className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-[2px]" />
-          <DialogPrimitive.Content className="fixed left-1/2 top-1/2 z-[100] max-h-[88vh] w-[94vw] max-w-5xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#101c24_0%,#0a1218_100%)] p-5 text-white shadow-[0_30px_90px_rgba(0,0,0,0.45)] focus:outline-none sm:p-6">
+          <DialogPrimitive.Content className="admin-theme admin-dialog">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#f0d18a]">

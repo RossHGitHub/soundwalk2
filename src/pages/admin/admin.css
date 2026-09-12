@@ -441,3 +441,68 @@
 @media (prefers-reduced-motion: reduce) {
   .admin-theme, .admin-theme * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Give native date/time controls enough room for their intrinsic picker UI. */
+.admin-theme .booking-fields :is(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+  border-color: #ffffff38;
+  background-color: #ffffff09;
+  box-shadow: inset 0 1px 0 #ffffff08;
+}
+.admin-theme .booking-fields :is(input, select, textarea):focus-visible {
+  border-color: #a5b4fc;
+  background-color: #a5b4fc10;
+}
+.booking-fields input:is([type="date"], [type="time"]) {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+.booking-fields input::-webkit-date-and-time-value { text-align: left; min-height: 1.5em; }
+@media (max-width: 639px) {
+  .booking-datetime { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .admin-theme .booking-fields :is(input, select) { min-height: 48px; }
+}
+.set-builder { display: grid; gap: 20px; min-width: 0; }
+.set-builder-notice { color: #a5adbf; font-size: 13px; min-height: 20px; overflow-wrap: anywhere; }
+.set-builder-plan, .set-builder-catalogue { min-width: 0; padding: 20px; border: 1px solid #ffffff1a; border-radius: 22px; background: #ffffff03; }
+.set-builder-toolbar { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; min-width: 0; }
+.set-builder-toolbar input { flex: 1 0 100%; }
+.set-builder-toolbar button { flex: 1; }
+.set-builder-sets { display: grid; gap: 16px; margin-top: 20px; }
+.set-builder-set { min-width: 0; padding: 16px; border: 1px solid #ffffff1a; border-radius: 18px; background: #ffffff03; }
+.set-builder-set.border-emerald-400\/60 { border-color: #a5b4fc66; background: #a5b4fc06; }
+.set-builder-entry { background: #0b1123; box-shadow: none; }
+.set-builder-song-row { display: grid; gap: 12px; }
+.set-builder-song-row > button { width: 100%; min-height: 52px; }
+.set-builder .truncate { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.set-builder-song-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-top: 8px; border-top: 1px solid #ffffff10; }
+.set-builder-song-actions select { width: 100%; min-width: 0; padding: 8px; margin-bottom: 4px; border: 1px solid #ffffff26; font-size: 13px; }
+.set-builder-song-actions > span { margin-right: auto; }
+.set-builder-song-actions button { min-width: 40px; min-height: 40px; }
+.set-builder-runtime { gap: 12px; flex-wrap: wrap; }
+.set-builder-runtime > div > p:nth-child(2) { display: none; }
+.set-builder-runtime > p { color: #c7d2fe; }
+.set-builder-catalogue-song { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 16px; }
+.set-builder-catalogue-song > button { width: 100%; }
+.set-builder-catalogue-song > div { justify-content: flex-end; }
+.set-builder-catalogue-song > button > div:first-child { display: none; }
+.set-builder-mobile-tabs { display: none; }
+@media (min-width: 1280px) {
+  .set-builder { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-items: start; }
+  .set-builder-notice { grid-column: 1 / -1; }
+  .set-builder-catalogue { position: sticky; top: 20px; max-height: calc(100dvh - 40px); overflow-y: auto; }
+}
+@media (max-width: 767px) {
+  .set-builder-mobile-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 1px solid #ffffff1a; background: #ffffff05; border-radius: 16px; }
+  .set-builder-mobile-tabs button { min-height: 44px; padding: 8px; font-size: 13px; border-radius: 12px; color: #a5adbf; }
+  .set-builder-mobile-tabs button[aria-pressed="true"] { background: white; color: #050816; font-weight: 600; }
+  .set-builder[data-mobile-pane="arrange"] .set-builder-catalogue,
+  .set-builder[data-mobile-pane="catalogue"] .set-builder-plan { display: none; }
+  .set-builder-plan, .set-builder-catalogue { padding: 12px; }
+  .set-builder-set { padding: 12px; }
+  .set-builder-toolbar button { flex: 1 1 40%; white-space: normal; }
+  .set-builder-song-actions button { min-width: 44px; min-height: 44px; }
+  .set-builder-catalogue button[aria-pressed] { min-height: 44px; overflow-wrap: anywhere; max-width: 100%; }
+}

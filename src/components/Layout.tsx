@@ -257,6 +257,12 @@ function LayoutShell() {
                     </SheetClose>
                   </div>
 
+                  <SheetClose asChild>
+                    <Link to="/admin" className="mt-4 flex min-h-11 items-center rounded-xl border border-white/10 px-4 text-sm text-white/65 hover:bg-white/5">
+                      Admin
+                    </Link>
+                  </SheetClose>
+
                   <div className="mt-auto px-2 pt-6">
                     <p className="text-xs uppercase tracking-[0.28em] text-white/38">Follow</p>
                     <div className="mt-4 flex items-center gap-4 text-white/64">
@@ -335,20 +341,7 @@ function LayoutShell() {
               </div>
             </div>
 
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/42">Credits</p>
-              <p className="mt-4 text-sm leading-7 text-white/62">
-                Pictures courtesy of Eliza Henderson and{" "}
-                <a
-                  href="https://www.instagram.com/fraser_photography444/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline decoration-white/30 underline-offset-4 transition hover:text-white"
-                >
-                  Fraser Farnan
-                </a>
-                .
-              </p>
+            <div className="hidden md:block">
               <Link
                 to="/admin"
                 className="mt-3 inline-block text-xs uppercase tracking-[0.24em] text-white/42 transition hover:text-white"
