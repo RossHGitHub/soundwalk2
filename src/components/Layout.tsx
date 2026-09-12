@@ -196,9 +196,9 @@ function LayoutShell() {
 
             <SheetContent
                 side="right"
-                className="w-[88vw] border-l-white/10 bg-[rgba(5,8,22,0.98)] px-0 text-white sm:max-w-xs"
+                className="h-dvh overflow-y-auto overscroll-contain w-[88vw] border-l-white/10 bg-[rgba(5,8,22,0.98)] px-0 text-white sm:max-w-xs"
               >
-                <SheetHeader className="px-6 pt-12 pb-4 text-left">
+                <SheetHeader className="shrink-0 px-6 pt-12 pb-4 text-left">
                   <div className="flex items-center justify-start">
                     <SiteLogo logoUrl={logoUrl} isHome={isHome} scrolled={scrolled} mobile />
                   </div>
@@ -208,7 +208,7 @@ function LayoutShell() {
                   </SheetDescription>
                 </SheetHeader>
 
-                <div className="flex h-full flex-col px-4 pb-6">
+                <div className="flex shrink-0 flex-col px-4 pb-[calc(24px+env(safe-area-inset-bottom))]">
                   <div className="space-y-2">
                     {navItems.map(({ name, path, icon: Icon }) => (
                       <SheetClose asChild key={name}>
